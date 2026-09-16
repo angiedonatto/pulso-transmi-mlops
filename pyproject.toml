@@ -15,7 +15,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ml = ["scikit-learn>=1.5,<2"]
+ml = [
+  "jupyter>=1,<2",
+  "matplotlib>=3.9,<4",
+  "scikit-learn>=1.5,<2",
+  "seaborn>=0.13,<1",
+  "tabulate>=0.9,<1",
+]
 dev = ["pytest>=8,<9"]
 
 [tool.setuptools.packages.find]

@@ -1,0 +1,15 @@
+table,column,missing
+stations,station_id,0
+stations,station_name,0
+stations,corridor,0
+stations,latitude,0
+stations,longitude,0
+observations,observed_at,0
+observations,station_id,0
+observations,demand,0
+context,observed_at,0
+context,rain_mm,0
+context,rain_forecast,0
+context,temperature_c,0
+context,temperature_forecast,0
+context,event_intensity,0

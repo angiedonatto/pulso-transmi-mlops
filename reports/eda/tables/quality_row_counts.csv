@@ -1,0 +1,4 @@
+table,actual,expected
+stations,12,12
+observations,51840,51840
+context,4320,4320

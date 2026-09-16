@@ -71,6 +71,32 @@ Para evaluación local, usa una división temporal: por ejemplo, primeros 38 dí
 para entrenamiento y últimos 7 para validación. Una partición aleatoria mezcla
 futuro y pasado y genera métricas engañosas.
 
+## EDA reproducible
+
+Este fork de trabajo incluye una primera capa de ciencia de datos para auditar
+los datos, generar visualizaciones y comparar baselines antes de modelar. El
+flujo mantiene los datos crudos fuera de Git en `data/raw/` y versiona solo
+código y reportes livianos en `reports/eda/`.
+
+```bash
+python -m pip install -e '.[dev,ml]'
+python -m src.ingest
+python -m src.data_quality
+python -m src.eda
+jupyter notebook notebooks/01_eda_pulso_transmi.ipynb
+```
+
+Los comandos generan:
+
+- `reports/eda/data_quality.md`: validaciones de calidad y cobertura;
+- `reports/eda/summary.md`: resumen ejecutivo del EDA;
+- `reports/eda/tables/`: tablas resumidas para análisis y entrega;
+- `reports/eda/figures/`: visualizaciones reproducibles.
+
+El notebook `notebooks/01_eda_pulso_transmi.ipynb` funciona como informe
+narrativo: explica por qué se usa validación temporal, qué patrones aparecen por
+estación y cómo interpretar los baselines iniciales.
+
 ## API de lectura `0.2.0`
 
 | Método | Ruta | Uso |

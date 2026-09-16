@@ -1,0 +1,120 @@
+erDiagram
+    stations ||--o{ observations : has
+    stations ||--o{ station_time_features : has
+    stations ||--o{ predictions : receives
+    stations ||--o{ metrics_by_station : evaluated_in
+
+    time_slots ||--o{ observations : indexes
+    time_slots ||--o{ context_observations : describes
+    time_slots ||--o{ station_time_features : enriches
+    time_slots ||--o{ predictions : target_time
+
+    pipeline_runs ||--o{ model_versions : trains
+    pipeline_runs ||--o{ predictions : generates
+    pipeline_runs ||--o{ metrics_by_station : logs
+    pipeline_runs ||--o{ data_quality_checks : validates
+
+    model_versions ||--o{ predictions : produces
+    model_versions ||--o{ metrics_by_station : evaluated_as
+
+    stations {
+        text station_id PK
+        text station_name
+        text corridor
+        float latitude
+        float longitude
+    }
+
+    time_slots {
+        timestamptz observed_at PK
+        date local_date
+        int hour
+        int minute
+        int day_of_week
+        text day_name
+        boolean is_weekend
+        int quarter_hour_block
+    }
+
+    observations {
+        text station_id PK,FK
+        timestamptz observed_at PK,FK
+        int demand
+        timestamptz ingested_at
+    }
+
+    context_observations {
+        timestamptz observed_at PK,FK
+        float rain_mm
+        float rain_forecast
+        float temperature_c
+        float temperature_forecast
+        float event_intensity
+    }
+
+    station_time_features {
+        text station_id PK,FK
+        timestamptz observed_at PK,FK
+        float demand_lag_24h
+        float demand_lag_7d
+        float rolling_mean_24h
+        float rolling_mean_7d
+        float rolling_std_24h
+    }
+
+    pipeline_runs {
+        uuid run_id PK
+        timestamptz started_at
+        timestamptz finished_at
+        text status
+        text git_commit
+        timestamptz data_cutoff
+        text trigger_type
+        text error_message
+    }
+
+    model_versions {
+        uuid model_id PK
+        uuid run_id FK
+        text model_name
+        text model_type
+        text artifact_uri
+        timestamptz trained_until
+        jsonb feature_config
+        jsonb params
+        boolean is_active
+    }
+
+    predictions {
+        uuid prediction_id PK
+        uuid run_id FK
+        uuid model_id FK
+        text station_id FK
+        timestamptz target_observed_at FK
+        int horizon_minutes
+        float prediction
+        timestamptz created_at
+    }
+
+    metrics_by_station {
+        uuid metric_id PK
+        uuid run_id FK
+        uuid model_id FK
+        text station_id FK
+        text split_name
+        timestamptz evaluation_start
+        timestamptz evaluation_end
+        float wape
+        float accuracy
+    }
+
+    data_quality_checks {
+        uuid check_id PK
+        uuid run_id FK
+        text check_name
+        text status
+        int actual_value
+        int expected_value
+        text details
+        timestamptz checked_at
+    }

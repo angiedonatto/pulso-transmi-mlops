@@ -1,0 +1,2 @@
+rows,unique_timestamps,missing_periods,extra_periods,min_observed_at,max_observed_at
+4320,4320,0,0,2026-07-26 05:00:00+00:00,2026-09-09 04:45:00+00:00
