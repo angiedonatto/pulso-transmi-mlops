@@ -1,0 +1,46 @@
+name: Shadow Candidate B
+
+on:
+  workflow_run:
+    workflows: ["Predict"]
+    types:
+      - completed
+    branches:
+      - student-work
+
+  workflow_dispatch:
+
+concurrency:
+  group: shadow-candidate-b
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    env:
+      PULSO_API_KEY: ${{ secrets.PULSO_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: student-work
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -e ".[ml]"
+
+      - name: Run Candidate B shadow inference
+        run: |
+          python scripts/run_candidate_b_shadow.py
