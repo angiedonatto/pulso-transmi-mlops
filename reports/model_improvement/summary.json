@@ -1,0 +1,94 @@
+{
+  "data_min": "2026-07-26T05:00:00Z",
+  "data_max": "2026-09-09T04:45:00Z",
+  "stations": 12,
+  "validation_cutoffs": 669,
+  "validation_start": "2026-09-02T04:45:00Z",
+  "validation_end": "2026-09-09T03:45:00Z",
+  "models": {
+    "champion actual": {
+      "mean_station_accuracy": 77.87955334784301,
+      "mean_station_wape": 0.2212044665215699,
+      "worst_station": {
+        "station_id": "02300",
+        "actual_sum": 816400.0,
+        "rows": 2676,
+        "station_wape": 0.3064661930426262,
+        "station_accuracy": 69.35338069573737
+      },
+      "worst_horizon": {
+        "horizon_minutes": 15.0,
+        "actual_sum": 2920593.0,
+        "rows": 8028.0,
+        "horizon_wape": 0.2102035442802198,
+        "horizon_accuracy": 78.97964557197803
+      },
+      "worst_station_horizon": {
+        "station_id": "02300",
+        "horizon_minutes": 15,
+        "actual_sum": 204054.0,
+        "rows": 669,
+        "station_horizon_wape": 0.3065463063698825,
+        "station_horizon_accuracy": 69.34536936301174
+      },
+      "train_seconds": 0.07439502099987294,
+      "complexity": "Muy baja: lag diario + fallback estacion x quarter-hour."
+    },
+    "candidate A": {
+      "mean_station_accuracy": 82.69209635098183,
+      "mean_station_wape": 0.17307903649018166,
+      "worst_station": {
+        "station_id": "02300",
+        "actual_sum": 816400.0,
+        "rows": 2676,
+        "station_wape": 0.23615889882410582,
+        "station_accuracy": 76.38411011758942
+      },
+      "worst_horizon": {
+        "horizon_minutes": 60.0,
+        "actual_sum": 2921610.0,
+        "rows": 8028.0,
+        "horizon_wape": 0.17352324574464079,
+        "horizon_accuracy": 82.64767542553592
+      },
+      "worst_station_horizon": {
+        "station_id": "02300",
+        "horizon_minutes": 60,
+        "actual_sum": 204114.0,
+        "rows": 669,
+        "station_horizon_wape": 0.24579156745740124,
+        "station_horizon_accuracy": 75.42084325425988
+      },
+      "train_seconds": 42.476572685000065,
+      "complexity": "Baja: blend por horizonte de lags recientes, lag diario y perfil historico."
+    },
+    "candidate B": {
+      "mean_station_accuracy": 87.4785552201394,
+      "mean_station_wape": 0.12521444779860605,
+      "worst_station": {
+        "station_id": "02300",
+        "actual_sum": 816400.0,
+        "rows": 2676,
+        "station_wape": 0.14396890716117175,
+        "station_accuracy": 85.60310928388283
+      },
+      "worst_horizon": {
+        "horizon_minutes": 60.0,
+        "actual_sum": 2921610.0,
+        "rows": 8028.0,
+        "horizon_wape": 0.1253245977299699,
+        "horizon_accuracy": 87.467540227003
+      },
+      "worst_station_horizon": {
+        "station_id": "02300",
+        "horizon_minutes": 60,
+        "actual_sum": 204114.0,
+        "rows": 669,
+        "station_horizon_wape": 0.1457430144737283,
+        "station_horizon_accuracy": 85.42569855262717
+      },
+      "train_seconds": 25.56811042300069,
+      "complexity": "Media: HistGradientBoostingRegressor global, reentrenado por fold diario."
+    }
+  }
+}

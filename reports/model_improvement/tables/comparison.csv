@@ -1,0 +1,4 @@
+model,accuracy_oficial_simulada,mejora_pp,estaciones_mejoran,estaciones_empeoran,complejidad_operativa,tiempo_entrenamiento_s
+champion actual,77.87955334784301,0.0,0,0,Muy baja: lag diario + fallback estacion x quarter-hour.,0.07439502099987294
+candidate A,82.69209635098183,4.8125430031388134,12,0,"Baja: blend por horizonte de lags recientes, lag diario y perfil historico.",42.476572685000065
+candidate B,87.4785552201394,9.599001872296384,12,0,"Media: HistGradientBoostingRegressor global, reentrenado por fold diario.",25.56811042300069
