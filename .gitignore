@@ -9,3 +9,5 @@ build/
 artifacts/
 data/
 *.egg-info/
+.env.local
+supabase/.temp/
