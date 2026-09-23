@@ -8,6 +8,7 @@ import pytest
 
 from cycle_predictions import (
     CyclePredictionError,
+    _time_slot_payloads_for_targets,
     build_predictions,
     generate_cycle_predictions,
     validate_predictions,
@@ -141,3 +142,30 @@ def test_rerun_is_idempotent(tmp_path: Path) -> None:
     assert second.predictions_generated == 2
     assert store.rows == first_rows
     assert len(store.rows) == 2
+
+
+def test_future_time_slot_payloads_are_complete_and_deduplicated() -> None:
+    duplicated_time_cycle = ForecastCycle(
+        cycle_id="cycle-dup",
+        data_cutoff="2026-01-02T00:00:00Z",
+        closes_at="2026-01-02T01:00:00Z",
+        expected_predictions=2,
+        targets=[
+            CycleTarget("03000", "2026-01-02T00:15:00Z", 15, 0, {}),
+            CycleTarget("02300", "2026-01-02T00:15:00Z", 15, 1, {}),
+        ],
+        raw_cycle={},
+    )
+    payloads = _time_slot_payloads_for_targets(duplicated_time_cycle)
+
+    assert len(payloads) == 1
+    assert payloads[0] == {
+        "observed_at": "2026-01-02T00:15:00Z",
+        "local_date": "2026-01-01",
+        "hour": 19,
+        "minute": 15,
+        "day_of_week": 3,
+        "day_name": "jueves",
+        "is_weekend": False,
+        "quarter_hour_block": 77,
+    }

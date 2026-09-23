@@ -166,6 +166,11 @@ class SupabaseCyclePredictionStore(SupabaseBaselineStore):
         )
         if cycle.targets:
             self._post_upsert(
+                "/time_slots",
+                _time_slot_payloads_for_targets(cycle),
+                on_conflict="observed_at",
+            )
+            self._post_upsert(
                 "/forecast_cycle_targets",
                 [
                     {
@@ -179,11 +184,6 @@ class SupabaseCyclePredictionStore(SupabaseBaselineStore):
                     for target in cycle.targets
                 ],
                 on_conflict="cycle_id,station_id,target_at",
-            )
-            self._post_upsert(
-                "/time_slots",
-                [_time_slot_payload(target.target_at) for target in cycle.targets],
-                on_conflict="observed_at",
             )
 
     def persist_predictions(self, cycle: ForecastCycle, model: dict[str, Any], predictions: list[CyclePrediction]) -> int:
@@ -237,6 +237,14 @@ def _load_artifact(model: dict[str, Any]) -> dict[str, Any]:
         raise CyclePredictionError(f"cannot read champion artifact: {artifact_uri}") from exc
     except json.JSONDecodeError as exc:
         raise CyclePredictionError(f"invalid champion artifact JSON: {artifact_uri}") from exc
+
+
+def _time_slot_payloads_for_targets(cycle: ForecastCycle) -> list[dict[str, Any]]:
+    by_observed_at = {
+        _time_slot_payload(target.target_at)["observed_at"]: _time_slot_payload(target.target_at)
+        for target in cycle.targets
+    }
+    return [by_observed_at[observed_at] for observed_at in sorted(by_observed_at)]
 
 
 def _prepare_observations(observations: pd.DataFrame) -> pd.DataFrame:
