@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from candidate_b_shadow import save_shadow_artifact, train_candidate_b_artifact
 from cycle_predictions import (
     CyclePredictionError,
     _time_slot_payloads_for_targets,
@@ -39,6 +40,35 @@ def observations(include_after_cutoff: bool = False) -> pd.DataFrame:
     if include_after_cutoff:
         rows.append({"station_id": "03000", "observed_at": "2026-01-02T00:15:00Z", "demand": 9999})
     return pd.DataFrame(rows)
+
+
+def candidate_observations(days: int = 20) -> pd.DataFrame:
+    rows = []
+    observed_at = pd.date_range("2026-01-01T00:00:00Z", periods=days * 96, freq="15min")
+    for station_id, offset in [("03000", 100), ("02300", 200)]:
+        for idx, timestamp in enumerate(observed_at):
+            rows.append(
+                {
+                    "station_id": station_id,
+                    "observed_at": timestamp.isoformat().replace("+00:00", "Z"),
+                    "demand": offset + (idx % 96) + (idx // 96),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def candidate_cycle() -> ForecastCycle:
+    return ForecastCycle(
+        cycle_id="cycle-candidate",
+        data_cutoff="2026-01-18T00:00:00Z",
+        closes_at="2026-01-18T01:00:00Z",
+        expected_predictions=2,
+        targets=[
+            CycleTarget("03000", "2026-01-18T00:15:00Z", 15, 0, {}),
+            CycleTarget("02300", "2026-01-18T01:00:00Z", 60, 1, {}),
+        ],
+        raw_cycle={},
+    )
 
 
 def artifact(path: Path) -> str:
@@ -87,6 +117,16 @@ class MemoryStore:
             for prediction in predictions
         }
         return len(predictions)
+
+
+class CandidateStore(MemoryStore):
+    def load_active_champion(self):
+        return {"model_id": "candidate-model", "run_id": "run-1", "artifact_uri": self.artifact_uri, "is_active": True}
+
+    def observations_until(self, data_cutoff: str):
+        frame = candidate_observations()
+        frame["observed_at"] = pd.to_datetime(frame["observed_at"], utc=True)
+        return frame[frame["observed_at"] <= pd.Timestamp(data_cutoff)].copy()
 
 
 def test_no_open_cycle_finishes_without_predictions(tmp_path: Path) -> None:
@@ -169,3 +209,23 @@ def test_future_time_slot_payloads_are_complete_and_deduplicated() -> None:
         "is_weekend": False,
         "quarter_hour_block": 77,
     }
+
+
+def test_active_candidate_b_artifact_generates_official_predictions(tmp_path: Path) -> None:
+    artifact_uri = str(tmp_path / "candidate_b_v1")
+    candidate_artifact = train_candidate_b_artifact(
+        candidate_observations(),
+        training_data_end="2026-01-18T00:00:00Z",
+        artifact_uri=artifact_uri,
+    )
+    save_shadow_artifact(candidate_artifact, artifact_uri=artifact_uri)
+    store = CandidateStore(artifact_uri)
+
+    result = generate_cycle_predictions(FakeApi(candidate_cycle()), store)
+
+    assert result.status == "predicted"
+    assert result.predictions_generated == candidate_cycle().expected_predictions
+    assert [(row[1], row[2]) for row in store.rows] == [
+        ("03000", "2026-01-18T00:15:00Z"),
+        ("02300", "2026-01-18T01:00:00Z"),
+    ]

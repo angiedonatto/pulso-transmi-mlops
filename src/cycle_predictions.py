@@ -90,9 +90,11 @@ def generate_predictions_for_cycle(cycle: ForecastCycle, store: PredictionStore)
 def build_predictions(
     cycle: ForecastCycle,
     model_id: str,
-    artifact: dict[str, Any],
+    artifact: Any,
     observations: pd.DataFrame,
 ) -> list[CyclePrediction]:
+    if not isinstance(artifact, dict):
+        return _build_non_baseline_predictions(cycle, model_id, artifact, observations)
     if artifact.get("model_type") != MODEL_TYPE:
         raise CyclePredictionError(f"unsupported champion model_type: {artifact.get('model_type')!r}")
     frame = _prepare_observations(observations)
@@ -227,19 +229,47 @@ class SupabaseCyclePredictionStore(SupabaseBaselineStore):
         response.raise_for_status()
 
 
-def _load_artifact(model: dict[str, Any]) -> dict[str, Any]:
+def _load_artifact(model: dict[str, Any]) -> Any:
     active = model.get("is_active")
     if active is not True:
         raise CyclePredictionError("loaded model is not active")
     artifact_uri = model.get("artifact_uri")
     if not isinstance(artifact_uri, str) or not artifact_uri:
         raise CyclePredictionError("active champion missing artifact_uri")
+    if artifact_uri.startswith("repo://") or Path(artifact_uri).is_dir():
+        try:
+            from candidate_b_shadow import load_shadow_artifact
+
+            return load_shadow_artifact(artifact_uri)
+        except Exception as exc:
+            raise CyclePredictionError(f"cannot load champion artifact: {artifact_uri}") from exc
     try:
         return json.loads(Path(artifact_uri).read_text())
     except OSError as exc:
         raise CyclePredictionError(f"cannot read champion artifact: {artifact_uri}") from exc
     except json.JSONDecodeError as exc:
         raise CyclePredictionError(f"invalid champion artifact JSON: {artifact_uri}") from exc
+
+
+def _build_non_baseline_predictions(
+    cycle: ForecastCycle,
+    model_id: str,
+    artifact: Any,
+    observations: pd.DataFrame,
+) -> list[CyclePrediction]:
+    try:
+        from candidate_b_shadow import MODEL_TYPE as CANDIDATE_B_MODEL_TYPE
+        from candidate_b_shadow import ShadowArtifact, ShadowCandidateError, build_shadow_predictions
+    except ImportError as exc:
+        raise CyclePredictionError("candidate model dependencies are unavailable") from exc
+    if not isinstance(artifact, ShadowArtifact):
+        raise CyclePredictionError(f"unsupported champion artifact type: {type(artifact).__name__}")
+    if artifact.metadata.get("model_type") != CANDIDATE_B_MODEL_TYPE:
+        raise CyclePredictionError(f"unsupported champion model_type: {artifact.metadata.get('model_type')!r}")
+    try:
+        return build_shadow_predictions(cycle, model_id, artifact, observations)
+    except ShadowCandidateError as exc:
+        raise CyclePredictionError(str(exc)) from exc
 
 
 def _time_slot_payloads_for_targets(cycle: ForecastCycle) -> list[dict[str, Any]]:

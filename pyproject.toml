@@ -12,13 +12,13 @@ license = {text = "MIT"}
 dependencies = [
   "httpx>=0.28,<1",
   "pandas>=2.2,<3",
+  "scikit-learn>=1.5,<2",
 ]
 
 [project.optional-dependencies]
 ml = [
   "jupyter>=1,<2",
   "matplotlib>=3.9,<4",
-  "scikit-learn>=1.5,<2",
   "seaborn>=0.13,<1",
   "tabulate>=0.9,<1",
 ]
