@@ -62,7 +62,10 @@ def generate_cycle_predictions(api: PulsoForecastCycleApi, store: PredictionStor
     cycle = api.current_cycle()
     if cycle is None:
         return CyclePredictionResult(status="no_open_cycle")
+    return generate_predictions_for_cycle(cycle, store)
 
+
+def generate_predictions_for_cycle(cycle: ForecastCycle, store: PredictionStore) -> CyclePredictionResult:
     model = store.load_active_champion()
     artifact = _load_artifact(model)
     observations = store.observations_until(cycle.data_cutoff)

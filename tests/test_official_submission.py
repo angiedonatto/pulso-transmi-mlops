@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import httpx
+import pandas as pd
 import pytest
 
 from forecast_cycle_sync import CycleTarget, ForecastCycle
@@ -8,6 +12,7 @@ from official_submission import (
     StoredPrediction,
     SubmissionError,
     build_submission_payload,
+    run_official_cycle,
     stable_idempotency_key,
     stable_payload_hash,
     submit_current_cycle,
@@ -65,8 +70,10 @@ class FakeApi:
 
 
 class FakeStore:
-    def __init__(self) -> None:
+    def __init__(self, *, official_receipt_exists: bool = False) -> None:
         self.receipts: list[dict] = []
+        self._official_receipt_exists = official_receipt_exists
+        self.official_receipt_checks: list[str] = []
 
     def load_active_champion(self):
         return model()
@@ -74,8 +81,50 @@ class FakeStore:
     def predictions_for_cycle(self, cycle_id, model_id):
         return predictions()
 
+    def official_receipt_exists(self, cycle_id):
+        self.official_receipt_checks.append(cycle_id)
+        return self._official_receipt_exists
+
     def persist_receipt(self, receipt):
         self.receipts.append(receipt)
+
+
+class FakePredictionStore:
+    """Minimal PredictionStore that produces predictions matching the shared cycle()/predictions() fixtures."""
+
+    def __init__(self, tmp_path: Path) -> None:
+        artifact_path = tmp_path / "artifact.json"
+        artifact_path.write_text(
+            json.dumps({"model_type": "baseline_lag96_station_slot_mean", "station_slot_means": {}})
+        )
+        self.artifact_uri = str(artifact_path)
+        self.persisted_cycle: ForecastCycle | None = None
+        self.persisted_predictions: list | None = None
+
+    def load_active_champion(self):
+        return {"model_id": model()["model_id"], "run_id": model()["run_id"], "artifact_uri": self.artifact_uri, "is_active": True}
+
+    def observations_until(self, data_cutoff):
+        return pd.DataFrame(
+            [
+                {"station_id": "03000", "observed_at": "2026-01-01T00:15:00Z", "demand": 10.0},
+                {"station_id": "02300", "observed_at": "2026-01-01T00:30:00Z", "demand": 20.5},
+            ]
+        )
+
+    def persist_cycle_targets(self, cycle) -> None:
+        self.persisted_cycle = cycle
+
+    def persist_predictions(self, cycle, model, predictions) -> int:
+        self.persisted_predictions = predictions
+        return len(predictions)
+
+
+class UntouchedPredictionStore:
+    """PredictionStore stub that fails the test if generation is attempted."""
+
+    def load_active_champion(self):
+        raise AssertionError("prediction generation should have been skipped")
 
 
 def test_payload_contract_and_stable_key() -> None:
@@ -163,3 +212,45 @@ def test_409_does_not_retry_blindly() -> None:
 
     assert len(api.keys) == 1
     assert store.receipts[0]["status"] == "rejected"
+
+
+def test_run_official_cycle_no_open_cycle_is_success() -> None:
+    api = FakeApi(current_cycle=None)
+    submission_store = FakeStore()
+
+    result = run_official_cycle(api, UntouchedPredictionStore(), submission_store)
+
+    assert result.status == "no_open_cycle"
+    assert submission_store.official_receipt_checks == []
+    assert submission_store.receipts == []
+
+
+def test_run_official_cycle_skips_repost_when_official_receipt_exists() -> None:
+    api = FakeApi(current_cycle=cycle())
+    submission_store = FakeStore(official_receipt_exists=True)
+
+    result = run_official_cycle(api, UntouchedPredictionStore(), submission_store)
+
+    assert result.status == "already_official"
+    assert result.cycle_id == "cyc_test_1"
+    assert submission_store.official_receipt_checks == ["cyc_test_1"]
+    assert api.keys == []
+    assert submission_store.receipts == []
+
+
+def test_run_official_cycle_generates_and_submits(tmp_path: Path) -> None:
+    api = FakeApi(
+        [httpx.Response(201, json={"submission_id": "sub_1", "accepted_at": "2026-01-02T00:05:00Z", "is_official": True})],
+        cycle(),
+    )
+    submission_store = FakeStore(official_receipt_exists=False)
+    prediction_store = FakePredictionStore(tmp_path)
+
+    result = run_official_cycle(api, prediction_store, submission_store)
+
+    assert result.status == "accepted"
+    assert result.submission_id == "sub_1"
+    assert prediction_store.persisted_predictions is not None
+    assert len(prediction_store.persisted_predictions) == 2
+    assert submission_store.official_receipt_checks == ["cyc_test_1"]
+    assert submission_store.receipts[0]["status"] == "accepted"

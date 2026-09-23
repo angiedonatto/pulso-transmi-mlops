@@ -10,6 +10,7 @@ from typing import Any, Protocol
 
 import httpx
 
+from cycle_predictions import PredictionStore, generate_predictions_for_cycle
 from forecast_cycle_sync import ForecastCycle, PulsoForecastCycleApi
 
 
@@ -38,6 +39,9 @@ class SubmissionStore(Protocol):
         ...
 
     def predictions_for_cycle(self, cycle_id: str, model_id: str) -> list[StoredPrediction]:
+        ...
+
+    def official_receipt_exists(self, cycle_id: str) -> bool:
         ...
 
     def persist_receipt(self, receipt: dict[str, Any]) -> None:
@@ -119,6 +123,19 @@ class SupabaseSubmissionStore:
             for row in response.json()
         ]
 
+    def official_receipt_exists(self, cycle_id: str) -> bool:
+        response = self._client.get(
+            "/submission_receipts",
+            params={
+                "cycle_id": f"eq.{cycle_id}",
+                "is_official": "eq.true",
+                "select": "receipt_id",
+                "limit": "1",
+            },
+        )
+        response.raise_for_status()
+        return len(response.json()) > 0
+
     def persist_receipt(self, receipt: dict[str, Any]) -> None:
         response = self._client.post("/submission_receipts", json=receipt)
         response.raise_for_status()
@@ -129,6 +146,34 @@ def submit_current_cycle(api: SubmissionApi, store: SubmissionStore, *, max_atte
     cycle = api.current_cycle()
     if cycle is None:
         return SubmissionResult(status="no_open_cycle")
+    return submit_for_cycle(cycle, api, store, max_attempts=max_attempts)
+
+
+def run_official_cycle(
+    api: SubmissionApi,
+    prediction_store: PredictionStore,
+    submission_store: SubmissionStore,
+    *,
+    max_attempts: int = 3,
+) -> SubmissionResult:
+    """Sync the current cycle, generate its predictions, and submit them officially.
+
+    Skips generation and submission entirely if an official receipt already
+    exists for the open cycle, so re-runs within the same cycle never repost.
+    """
+    api.validate_identity()
+    cycle = api.current_cycle()
+    if cycle is None:
+        return SubmissionResult(status="no_open_cycle")
+    if submission_store.official_receipt_exists(cycle.cycle_id):
+        return SubmissionResult(status="already_official", cycle_id=cycle.cycle_id)
+    generate_predictions_for_cycle(cycle, prediction_store)
+    return submit_for_cycle(cycle, api, submission_store, max_attempts=max_attempts)
+
+
+def submit_for_cycle(
+    cycle: ForecastCycle, api: SubmissionApi, store: SubmissionStore, *, max_attempts: int = 3
+) -> SubmissionResult:
     model = store.load_active_champion()
     predictions = store.predictions_for_cycle(cycle.cycle_id, model["model_id"])
     payload = build_submission_payload(cycle, model, predictions)

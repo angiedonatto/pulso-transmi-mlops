@@ -27,25 +27,25 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -e .
 
-      - name: Sync stream and generate cycle predictions
+      - name: Sync stream, generate predictions and submit official cycle
         run: |
           python - <<'PY'
-          from cycle_predictions import SupabaseCyclePredictionStore, generate_cycle_predictions
-          from forecast_cycle_sync import PulsoForecastCycleApi
+          from cycle_predictions import SupabaseCyclePredictionStore
+          from official_submission import PulsoSubmissionApi, SupabaseSubmissionStore, run_official_cycle
           from stream_sync import PulsoStreamApi, SupabaseRestObservationStore, sync_observation_stream
 
           with PulsoStreamApi() as stream_api, SupabaseRestObservationStore() as observation_store:
               sync_observation_stream(stream_api, observation_store)
 
-          with PulsoForecastCycleApi() as cycle_api, SupabaseCyclePredictionStore() as prediction_store:
-              result = generate_cycle_predictions(cycle_api, prediction_store)
+          with PulsoSubmissionApi() as api, \
+                  SupabaseCyclePredictionStore() as prediction_store, \
+                  SupabaseSubmissionStore() as submission_store:
+              result = run_official_cycle(api, prediction_store, submission_store)
 
           print(
               "predict complete: "
               f"status={result.status} "
               f"cycle_id={result.cycle_id} "
-              f"expected_predictions={result.expected_predictions} "
-              f"predictions_generated={result.predictions_generated} "
-              "submission_post=not_executed"
+              f"submission_id={result.submission_id}"
           )
           PY
