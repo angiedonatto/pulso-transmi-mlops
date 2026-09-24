@@ -1,0 +1,180 @@
+from __future__ import annotations
+
+import math
+
+from runtime_data_validation import RuntimeDataValidator, RuntimeValidationContext
+from stream_sync import ObservationRow
+
+
+def validate(rows, **kwargs):
+    context = RuntimeValidationContext(**kwargs)
+    return RuntimeDataValidator().validate(rows, context)
+
+
+def event_reasons(result):
+    return {reason for event in result.events for reason in event.reason_codes}
+
+
+def test_demand_int_passes() -> None:
+    result = validate([{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 120}])
+
+    assert result.data_health == "HEALTHY"
+    assert result.prediction_readiness == "READY"
+    assert result.valid_rows == [ObservationRow("03000", "2026-01-01T05:00:00Z", 120)]
+
+
+def test_numeric_string_and_integer_float_are_recovered() -> None:
+    result = validate(
+        [
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": "120"},
+            {"station_id": "02300", "observed_at": "2026-01-01T05:15:00Z", "demand": "120.0"},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:30:00Z", "demand": 121.0},
+        ]
+    )
+
+    assert [row.demand for row in result.valid_rows] == [120, 120, 121]
+    assert "demand_integer_recovered" in event_reasons(result)
+    assert result.data_health == "DEGRADED"
+
+
+def test_decimal_float_is_quarantined_without_rounding() -> None:
+    result = validate([{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 120.7}])
+
+    assert result.valid_rows == []
+    assert "demand_not_integer" in event_reasons(result)
+    assert result.quarantined_rows == 1
+
+
+def test_null_negative_nan_infinity_and_bool_demand_are_quarantined() -> None:
+    result = validate(
+        [
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": None},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:15:00Z", "demand": -1},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:30:00Z", "demand": math.nan},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:45:00Z", "demand": math.inf},
+            {"station_id": "03000", "observed_at": "2026-01-01T06:00:00Z", "demand": True},
+        ]
+    )
+
+    assert result.valid_rows == []
+    assert {"demand_not_integer", "demand_negative", "demand_not_finite", "demand_bool"} <= event_reasons(result)
+    assert result.quarantined_rows == 5
+
+
+def test_extreme_outlier_warns_but_remains_valid() -> None:
+    history = [
+        ObservationRow("03000", f"2025-12-{day:02d}T05:00:00Z", value)
+        for day, value in enumerate([100, 101, 99, 100, 100, 102, 98, 100, 101, 99, 100, 100], start=1)
+    ]
+    result = validate(
+        [{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 999}],
+        history_rows=history,
+    )
+
+    assert result.valid_rows[0].demand == 999
+    assert "demand_outlier" in event_reasons(result)
+    assert result.data_health == "DEGRADED"
+
+
+def test_station_id_keeps_leading_zero_and_numeric_is_recovered_only_if_known() -> None:
+    result = validate(
+        [
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10},
+            {"station_id": 3000, "observed_at": "2026-01-01T05:15:00Z", "demand": 11},
+            {"station_id": "999", "observed_at": "2026-01-01T05:30:00Z", "demand": 12},
+        ],
+        known_station_ids={"03000"},
+    )
+
+    assert result.valid_rows[0].station_id == "03000"
+    assert result.valid_rows[1].station_id == "03000"
+    assert "station_id_zero_padded" in event_reasons(result)
+    assert "station_id_not_recoverable" in event_reasons(result)
+
+
+def test_new_station_is_quarantined_because_catalog_fk_would_fail() -> None:
+    result = validate([{"station_id": "99999", "observed_at": "2026-01-01T05:00:00Z", "demand": 10}], known_station_ids={"03000"})
+
+    assert result.valid_rows == []
+    assert "new_station" in event_reasons(result)
+
+
+def test_duplicate_identical_and_conflicting_within_batch() -> None:
+    result = validate(
+        [
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10},
+            {"station_id": "02300", "observed_at": "2026-01-01T05:00:00Z", "demand": 20},
+            {"station_id": "02300", "observed_at": "2026-01-01T05:00:00Z", "demand": 21},
+        ]
+    )
+
+    assert [row.station_id for row in result.valid_rows] == ["03000"]
+    assert "duplicate_identical_batch" in event_reasons(result)
+    assert "duplicate_conflicting_batch" in event_reasons(result)
+
+
+def test_duplicate_conflicting_against_existing_observation_is_quarantined() -> None:
+    result = validate(
+        [{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10}],
+        existing_observations={("03000", "2026-01-01T05:00:00Z"): 11},
+    )
+
+    assert result.valid_rows == []
+    assert "duplicate_conflicting_existing" in event_reasons(result)
+
+
+def test_timestamp_without_timezone_is_quarantined() -> None:
+    result = validate([{"station_id": "03000", "observed_at": "2026-01-01T05:00:00", "demand": 10}])
+
+    assert result.valid_rows == []
+    assert "timestamp_missing_timezone" in event_reasons(result)
+
+
+def test_out_of_order_late_arrival_and_gap_warn_without_dropping_rows() -> None:
+    result = validate(
+        [
+            {"station_id": "03000", "observed_at": "2026-01-01T05:30:00Z", "demand": 10},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 11},
+        ],
+        last_observed_at="2026-01-01T05:15:00Z",
+    )
+
+    assert len(result.valid_rows) == 2
+    checks = {check.check_name: check for check in result.checks}
+    assert checks["runtime.timestamp.ordering"].status == "warning"
+    assert checks["runtime.timestamp.gaps"].status == "warning"
+
+
+def test_extra_column_required_missing_partial_corruption_and_empty_response() -> None:
+    result = validate(
+        [
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10, "extra": "x"},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:15:00Z"},
+        ]
+    )
+    empty = validate([])
+
+    assert len(result.valid_rows) == 1
+    assert "missing_required_field" in event_reasons(result)
+    assert {check.check_name: check.status for check in result.checks}["runtime.schema.extra_fields"] == "warning"
+    assert empty.data_health == "DEGRADED"
+    assert empty.prediction_readiness == "NOT_READY"
+
+
+def test_all_rows_missing_required_column_is_critical() -> None:
+    result = validate([{"station_id": "03000", "demand": 10}])
+
+    assert result.data_health == "CRITICAL"
+    assert result.prediction_readiness == "NOT_READY"
+
+
+def test_model_compatibility_is_separate_from_data_health() -> None:
+    result = RuntimeDataValidator().validate(
+        [{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10}],
+        RuntimeValidationContext(known_station_ids={"03000"}, champion_station_ids={"02300", "03000"}),
+    )
+
+    assert result.data_health == "HEALTHY"
+    assert result.prediction_readiness == "DEGRADED"
+    assert result.model_compatibility.missing_expected == ("02300",)
