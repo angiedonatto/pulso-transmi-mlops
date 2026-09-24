@@ -1,0 +1,235 @@
+{
+  "candidate_version": "candidate_c_v1_experiment",
+  "data_min": "2026-07-26T05:00:00Z",
+  "data_max": "2026-09-11T17:00:00Z",
+  "stations": 12,
+  "walk_forward_start": "2026-09-03T16:00:00Z",
+  "walk_forward_end": "2026-09-10T15:00:00Z",
+  "hard_holdout_start": "2026-09-10T16:00:00Z",
+  "hard_holdout_end": "2026-09-11T16:00:00Z",
+  "leakage_checks": {
+    "rows": 9264,
+    "target_cutoff_consistent": true,
+    "max_data_cutoff": "2026-09-11T16:00:00Z",
+    "max_target_at": "2026-09-11T17:00:00Z",
+    "feature_schema": [
+      "station_code",
+      "horizon_minutes",
+      "target_hour",
+      "target_minute",
+      "target_day_of_week",
+      "target_is_weekend",
+      "target_quarter_hour_block",
+      "lag_15",
+      "lag_30",
+      "lag_45",
+      "lag_60",
+      "lag_96",
+      "lag_weekly",
+      "recent_mean",
+      "recent_median",
+      "profile_mean",
+      "profile_median",
+      "lag15_minus_lag30",
+      "lag30_minus_lag60",
+      "recent_trend",
+      "recent_profile_ratio",
+      "rolling_mean_1h",
+      "rolling_median_1h",
+      "rolling_std_1h",
+      "rolling_mean_2h",
+      "rolling_median_2h",
+      "rolling_std_2h",
+      "rolling_mean_4h",
+      "rolling_median_4h",
+      "rolling_std_4h",
+      "same_slot_previous_day",
+      "same_slot_previous_week",
+      "station_horizon_code",
+      "hour_station_code"
+    ]
+  },
+  "comparison_walk_forward": [
+    {
+      "model": "Candidate B actual",
+      "walk_forward_accuracy": 86.91574524754385,
+      "improvement_pp_vs_candidate_b": 0.0,
+      "stations_improve": 0,
+      "stations_worsen": 0,
+      "worst_station": "10009",
+      "worst_station_accuracy": 85.31480602788533,
+      "worst_horizon": 30,
+      "worst_horizon_accuracy": 86.96042511839386,
+      "estimator": "hist_gradient_boosting",
+      "train_seconds": 41.739201364998735
+    },
+    {
+      "model": "candidate C global",
+      "walk_forward_accuracy": 86.84338709040765,
+      "improvement_pp_vs_candidate_b": -0.07235815713620752,
+      "stations_improve": 5,
+      "stations_worsen": 7,
+      "worst_station": "09000",
+      "worst_station_accuracy": 85.42629175572513,
+      "worst_horizon": 60,
+      "worst_horizon_accuracy": 86.79993751059753,
+      "estimator": "hist_gradient_boosting",
+      "train_seconds": 16.308167210001557
+    },
+    {
+      "model": "candidate C por horizonte",
+      "walk_forward_accuracy": 86.5747667798737,
+      "improvement_pp_vs_candidate_b": -0.34097846767015483,
+      "stations_improve": 1,
+      "stations_worsen": 11,
+      "worst_station": "07105",
+      "worst_station_accuracy": 84.75929294151805,
+      "worst_horizon": 60,
+      "worst_horizon_accuracy": 86.62597617136434,
+      "estimator": "hist_gradient_boosting_by_horizon",
+      "train_seconds": 31.60678117000134
+    },
+    {
+      "model": "candidate C h\u00edbrido por estaci\u00f3n",
+      "walk_forward_accuracy": 87.10953296491645,
+      "improvement_pp_vs_candidate_b": 0.1937877173726008,
+      "stations_improve": 8,
+      "stations_worsen": 4,
+      "worst_station": "09000",
+      "worst_station_accuracy": 85.42629175572513,
+      "worst_horizon": 60,
+      "worst_horizon_accuracy": 86.94258740615354,
+      "estimator": "extra_trees",
+      "train_seconds": 28.777910336997593
+    }
+  ],
+  "comparison_hard_holdout": [
+    {
+      "model": "Candidate B actual",
+      "hard_holdout_accuracy": 85.88617585747149,
+      "worst_station": "06111",
+      "worst_station_accuracy": 82.97386001898971,
+      "worst_horizon": 30,
+      "worst_horizon_accuracy": 85.16521823238264
+    },
+    {
+      "model": "candidate C global",
+      "hard_holdout_accuracy": 86.0706686760708,
+      "worst_station": "06111",
+      "worst_station_accuracy": 83.13682175493092,
+      "worst_horizon": 30,
+      "worst_horizon_accuracy": 85.28794557923732
+    },
+    {
+      "model": "candidate C por horizonte",
+      "hard_holdout_accuracy": 86.05912034065375,
+      "worst_station": "06111",
+      "worst_station_accuracy": 83.20901184166526,
+      "worst_horizon": 30,
+      "worst_horizon_accuracy": 85.18742859256625
+    },
+    {
+      "model": "candidate C h\u00edbrido por estaci\u00f3n",
+      "hard_holdout_accuracy": 86.2534817679428,
+      "worst_station": "06111",
+      "worst_station_accuracy": 84.12405127806989,
+      "worst_horizon": 30,
+      "worst_horizon_accuracy": 85.79277562095888
+    }
+  ],
+  "trials": [
+    {
+      "family": "candidate C global",
+      "trial": 1,
+      "accuracy": 86.79308593048007,
+      "params": {
+        "loss": "absolute_error",
+        "learning_rate": 0.06,
+        "max_iter": 120,
+        "max_leaf_nodes": 31,
+        "min_samples_leaf": 20,
+        "l2_regularization": 0.05,
+        "random_state": 17
+      }
+    },
+    {
+      "family": "candidate C global",
+      "trial": 2,
+      "accuracy": 86.49296706519335,
+      "params": {
+        "loss": "absolute_error",
+        "learning_rate": 0.05,
+        "max_iter": 140,
+        "max_leaf_nodes": 15,
+        "min_samples_leaf": 30,
+        "l2_regularization": 0.1,
+        "random_state": 17
+      }
+    },
+    {
+      "family": "candidate C global",
+      "trial": 3,
+      "accuracy": 86.84338709040765,
+      "params": {
+        "loss": "absolute_error",
+        "learning_rate": 0.08,
+        "max_iter": 100,
+        "max_leaf_nodes": 31,
+        "min_samples_leaf": 35,
+        "l2_regularization": 0.1,
+        "random_state": 17
+      }
+    },
+    {
+      "family": "candidate C h\u00edbrido por estaci\u00f3n",
+      "trial": "hist_gradient_boosting",
+      "accuracy": 86.99899815833639,
+      "params": {
+        "station_estimator": "hist_gradient_boosting",
+        "global_params": {
+          "loss": "absolute_error",
+          "learning_rate": 0.08,
+          "max_iter": 100,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 35,
+          "l2_regularization": 0.1,
+          "random_state": 17
+        }
+      }
+    },
+    {
+      "family": "candidate C h\u00edbrido por estaci\u00f3n",
+      "trial": "extra_trees",
+      "accuracy": 87.10953296491645,
+      "params": {
+        "station_estimator": "extra_trees",
+        "global_params": {
+          "loss": "absolute_error",
+          "learning_rate": 0.08,
+          "max_iter": 100,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 35,
+          "l2_regularization": 0.1,
+          "random_state": 17
+        }
+      }
+    },
+    {
+      "family": "candidate C h\u00edbrido por estaci\u00f3n",
+      "trial": "random_forest",
+      "accuracy": 87.00232942540542,
+      "params": {
+        "station_estimator": "random_forest",
+        "global_params": {
+          "loss": "absolute_error",
+          "learning_rate": 0.08,
+          "max_iter": 100,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 35,
+          "l2_regularization": 0.1,
+          "random_state": 17
+        }
+      }
+    }
+  ]
+}

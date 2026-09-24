@@ -1,0 +1,5 @@
+model,walk_forward_accuracy,improvement_pp_vs_candidate_b,stations_improve,stations_worsen,worst_station,worst_station_accuracy,worst_horizon,worst_horizon_accuracy,estimator,train_seconds
+Candidate B actual,86.91574524754385,0.0,0,0,10009,85.31480602788533,30,86.96042511839386,hist_gradient_boosting,41.739201364998735
+candidate C global,86.84338709040765,-0.07235815713620752,5,7,09000,85.42629175572513,60,86.79993751059753,hist_gradient_boosting,16.308167210001557
+candidate C por horizonte,86.5747667798737,-0.34097846767015483,1,11,07105,84.75929294151805,60,86.62597617136434,hist_gradient_boosting_by_horizon,31.60678117000134
+candidate C hibrido por estacion,87.10953296491645,0.1937877173726008,8,4,09000,85.42629175572513,60,86.94258740615354,extra_trees,28.777910336997593
