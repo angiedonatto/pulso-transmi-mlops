@@ -710,7 +710,8 @@ def _add_recent_features(frame: pd.DataFrame) -> None:
 def _validate_artifact_metadata(metadata: dict[str, Any]) -> None:
     if metadata.get("model_type") != MODEL_TYPE:
         raise ShadowCandidateError(f"unsupported shadow model_type: {metadata.get('model_type')!r}")
-    if metadata.get("version") != MODEL_VERSION:
+    version = metadata.get("version")
+    if not isinstance(version, str) or not version.startswith("candidate_b_v"):
         raise ShadowCandidateError("shadow artifact version mismatch")
     if metadata.get("feature_schema") != FEATURE_SCHEMA:
         raise ShadowCandidateError("shadow artifact feature schema mismatch")
