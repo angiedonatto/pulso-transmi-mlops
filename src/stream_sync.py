@@ -452,7 +452,7 @@ def sync_observation_stream(
         if not page.rows:
             break
 
-        rows_to_write = validation.valid_rows
+        rows_to_write = getattr(validation, "rows_to_write", validation.valid_rows)
         rows_written = store.upsert_observations(rows_to_write)
         page_last_observed_at = max((row.observed_at for row in rows_to_write), default=last_observed_at)
         is_exhausted = page.next_cursor is None
@@ -562,7 +562,7 @@ def replay_quarantined_events(store: ObservationStore, *, limit: int = 100) -> Q
 
         event_resolved = not validation.has_critical and bool(validation.valid_rows)
         if event_resolved:
-            rows_written += store.upsert_observations(validation.valid_rows)
+            rows_written += store.upsert_observations(getattr(validation, "rows_to_write", validation.valid_rows))
             resolved += 1
         else:
             still_invalid += 1

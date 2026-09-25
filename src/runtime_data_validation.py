@@ -22,7 +22,8 @@ PredictionReadiness = Literal["READY", "DEGRADED", "NOT_READY"]
 
 STATION_ID_RE = re.compile(r"^[0-9]{5}$")
 REQUIRED_FIELDS = ("station_id", "observed_at", "demand")
-EXPECTED_FIELDS = set(REQUIRED_FIELDS)
+OPTIONAL_KNOWN_FIELDS = {"released_at"}
+EXPECTED_FIELDS = set(REQUIRED_FIELDS) | OPTIONAL_KNOWN_FIELDS
 BOGOTA_TZ = ZoneInfo("America/Bogota")
 
 
@@ -76,6 +77,7 @@ class RuntimeValidationContext:
 class RuntimeValidationResult:
     raw_payload: Any
     valid_rows: list[ObservationRow]
+    rows_to_write: list[ObservationRow]
     events: list[RuntimeIngestionEvent]
     checks: list[RuntimeQualityCheck]
     data_health: DataHealth
@@ -140,7 +142,7 @@ class RuntimeDataValidator:
             )
             compatibility = ModelCompatibilityReport((), (), tuple(sorted(context.champion_station_ids or ())))
             health: DataHealth = "CRITICAL" if is_critical else "DEGRADED"
-            return RuntimeValidationResult(payload, [], events, checks, health, "NOT_READY", compatibility, batch_hash)
+            return RuntimeValidationResult(payload, [], [], events, checks, health, "NOT_READY", compatibility, batch_hash)
 
         normalized_candidates: list[tuple[int, ObservationRow, dict[str, Any], Any]] = []
         quarantined_indexes: set[int] = set()
@@ -226,8 +228,21 @@ class RuntimeDataValidator:
         else:
             checks.append(_check("runtime.schema.extra_fields", "passed", "pass", 0, 0, {}, batch_hash, context.cursor))
 
-        valid_rows = _deduplicate_and_check_existing(normalized_candidates, context, events, batch_hash)
-        _add_order_gap_coverage_checks(valid_rows, context, checks, events, batch_hash)
+        valid_rows, rows_to_write, existing_identical_count = _deduplicate_and_check_existing(normalized_candidates, context, events, batch_hash)
+        if existing_identical_count:
+            checks.append(
+                _check(
+                    "runtime.duplicates.identical_existing",
+                    "passed",
+                    "pass",
+                    existing_identical_count,
+                    0,
+                    {"rows_ignored": existing_identical_count, "message": "identical existing observations skipped as idempotent"},
+                    batch_hash,
+                    context.cursor,
+                )
+            )
+        _add_order_gap_coverage_checks(rows_to_write, valid_rows, context, checks, events, batch_hash)
         _add_outlier_warnings(valid_rows, context, events, checks, batch_hash)
         compatibility = _model_compatibility(valid_rows, context)
         if compatibility.unknown_to_model or compatibility.missing_expected:
@@ -251,7 +266,7 @@ class RuntimeDataValidator:
 
         data_health = _data_health(checks, events)
         prediction_readiness = _prediction_readiness(data_health, valid_rows, compatibility)
-        return RuntimeValidationResult(payload, valid_rows, events, checks, data_health, prediction_readiness, compatibility, batch_hash)
+        return RuntimeValidationResult(payload, valid_rows, rows_to_write, events, checks, data_health, prediction_readiness, compatibility, batch_hash)
 
 
 def _normalize_station_id(
@@ -365,12 +380,14 @@ def _deduplicate_and_check_existing(
     context: RuntimeValidationContext,
     events: list[RuntimeIngestionEvent],
     batch_hash: str,
-) -> list[ObservationRow]:
+) -> tuple[list[ObservationRow], list[ObservationRow], int]:
     by_key: dict[tuple[str, str], list[tuple[int, ObservationRow, dict[str, Any], dict[str, Any]]]] = {}
     for item in candidates:
         _, row, _, _ = item
         by_key.setdefault((row.station_id, row.observed_at), []).append(item)
     valid: list[ObservationRow] = []
+    rows_to_write: list[ObservationRow] = []
+    existing_identical_count = 0
     for key, items in by_key.items():
         demands = {item[1].demand for item in items}
         if len(demands) > 1:
@@ -392,21 +409,23 @@ def _deduplicate_and_check_existing(
             )
             continue
         if existing == first_row.demand:
-            events.append(
-                _event("row", "warning", ("duplicate_identical_existing",), first_raw, first_normalized, {"existing_demand": existing}, batch_hash, context.cursor, _hash_payload(first_raw), first_row.station_id, first_row.observed_at)
-            )
+            existing_identical_count += len(items)
+            valid.append(first_row)
+            continue
         valid.append(first_row)
-    return valid
+        rows_to_write.append(first_row)
+    return valid, rows_to_write, existing_identical_count
 
 
 def _add_order_gap_coverage_checks(
-    rows: list[ObservationRow],
+    rows_to_write: list[ObservationRow],
+    valid_rows: list[ObservationRow],
     context: RuntimeValidationContext,
     checks: list[RuntimeQualityCheck],
     events: list[RuntimeIngestionEvent],
     batch_hash: str,
 ) -> None:
-    parsed = [(row, datetime.fromisoformat(row.observed_at.replace("Z", "+00:00"))) for row in rows]
+    parsed = [(row, datetime.fromisoformat(row.observed_at.replace("Z", "+00:00"))) for row in rows_to_write]
     out_of_order = sum(1 for idx in range(1, len(parsed)) if parsed[idx][1] < parsed[idx - 1][1])
     late = 0
     if context.last_observed_at:
@@ -424,7 +443,7 @@ def _add_order_gap_coverage_checks(
     checks.append(_check("runtime.timestamp.gaps", "warning" if gaps else "passed", "warning" if gaps else "pass", gaps, 0, {}, batch_hash, context.cursor))
 
     if context.known_station_ids:
-        observed = {row.station_id for row in rows}
+        observed = {row.station_id for row in valid_rows}
         missing = sorted(context.known_station_ids - observed)
         coverage = len(observed & context.known_station_ids)
         checks.append(_check("runtime.station.coverage", "warning" if missing else "passed", "warning" if missing else "pass", coverage, len(context.known_station_ids), {"missing_station_ids": missing}, batch_hash, context.cursor))
@@ -599,6 +618,7 @@ def api_error_validation_result(
     )
     return RuntimeValidationResult(
         payload,
+        [],
         [],
         [event],
         [check],

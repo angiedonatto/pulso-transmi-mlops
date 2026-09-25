@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime, timedelta, timezone
 
 from runtime_data_validation import RuntimeDataValidator, RuntimeValidationContext
 from stream_sync import ObservationRow
@@ -13,6 +14,10 @@ def validate(rows, **kwargs):
 
 def event_reasons(result):
     return {reason for event in result.events for reason in event.reason_codes}
+
+
+def checks_by_name(result):
+    return {check.check_name: check for check in result.checks}
 
 
 def test_demand_int_passes() -> None:
@@ -124,6 +129,46 @@ def test_duplicate_conflicting_against_existing_observation_is_quarantined() -> 
     assert "duplicate_conflicting_existing" in event_reasons(result)
 
 
+def test_identical_existing_duplicate_is_idempotent_and_not_written_or_warned() -> None:
+    row = {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10}
+    result = validate([row], existing_observations={("03000", "2026-01-01T05:00:00Z"): 10})
+
+    checks = checks_by_name(result)
+    assert result.valid_rows == [ObservationRow("03000", "2026-01-01T05:00:00Z", 10)]
+    assert result.rows_to_write == []
+    assert result.events == []
+    assert result.data_health == "HEALTHY"
+    assert checks["runtime.duplicates.identical_existing"].severity == "pass"
+    assert checks["runtime.duplicates.identical_existing"].actual_value == 1
+
+
+def test_identical_existing_late_rows_do_not_count_as_late_arrivals() -> None:
+    result = validate(
+        [{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10}],
+        existing_observations={("03000", "2026-01-01T05:00:00Z"): 10},
+        last_observed_at="2026-01-02T00:00:00Z",
+    )
+
+    ordering = checks_by_name(result)["runtime.timestamp.ordering"]
+    assert result.rows_to_write == []
+    assert ordering.status == "passed"
+    assert ordering.details["late_arrivals"] == 0
+    assert result.data_health == "HEALTHY"
+
+
+def test_new_late_arrival_warns_and_is_kept_for_write() -> None:
+    result = validate(
+        [{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10}],
+        last_observed_at="2026-01-02T00:00:00Z",
+    )
+
+    ordering = checks_by_name(result)["runtime.timestamp.ordering"]
+    assert result.rows_to_write == [ObservationRow("03000", "2026-01-01T05:00:00Z", 10)]
+    assert ordering.status == "warning"
+    assert ordering.details["late_arrivals"] == 1
+    assert result.data_health == "DEGRADED"
+
+
 def test_timestamp_without_timezone_is_quarantined() -> None:
     result = validate([{"station_id": "03000", "observed_at": "2026-01-01T05:00:00", "demand": 10}])
 
@@ -160,6 +205,71 @@ def test_extra_column_required_missing_partial_corruption_and_empty_response() -
     assert {check.check_name: check.status for check in result.checks}["runtime.schema.extra_fields"] == "warning"
     assert empty.data_health == "DEGRADED"
     assert empty.prediction_readiness == "NOT_READY"
+
+
+def test_released_at_is_known_metadata_but_unknown_extra_field_warns() -> None:
+    released = validate(
+        [
+            {
+                "station_id": "03000",
+                "observed_at": "2026-01-01T05:00:00Z",
+                "demand": 10,
+                "released_at": "2026-01-01T05:01:00Z",
+            }
+        ]
+    )
+    unknown = validate(
+        [
+            {
+                "station_id": "03000",
+                "observed_at": "2026-01-01T05:00:00Z",
+                "demand": 10,
+                "mystery_field": "x",
+            }
+        ]
+    )
+
+    assert checks_by_name(released)["runtime.schema.extra_fields"].status == "passed"
+    assert released.raw_payload["data"][0]["released_at"] == "2026-01-01T05:01:00Z"
+    assert checks_by_name(unknown)["runtime.schema.extra_fields"].status == "warning"
+    assert checks_by_name(unknown)["runtime.schema.extra_fields"].details["extra_fields"] == ["mystery_field"]
+
+
+def test_many_existing_identical_duplicates_and_new_rows_are_aggregated_without_noise() -> None:
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    existing_rows = [
+        {
+            "station_id": "03000",
+            "observed_at": (start + timedelta(minutes=15 * index)).isoformat().replace("+00:00", "Z"),
+            "demand": 100 + index % 7,
+        }
+        for index in range(3708)
+    ]
+    new_start = datetime(2026, 3, 1, tzinfo=timezone.utc)
+    new_rows = [
+        {
+            "station_id": "03000",
+            "observed_at": (new_start + timedelta(minutes=15 * index)).isoformat().replace("+00:00", "Z"),
+            "demand": 150 + index % 5,
+        }
+        for index in range(24)
+    ]
+    existing = {(row["station_id"], row["observed_at"]): row["demand"] for row in existing_rows}
+
+    result = validate(
+        existing_rows + new_rows,
+        existing_observations=existing,
+        last_observed_at="2026-02-15T00:00:00Z",
+    )
+
+    checks = checks_by_name(result)
+    assert len(result.valid_rows) == 3732
+    assert len(result.rows_to_write) == 24
+    assert len(result.events) == 0
+    assert checks["runtime.duplicates.identical_existing"].severity == "pass"
+    assert checks["runtime.duplicates.identical_existing"].actual_value == 3708
+    assert checks["runtime.timestamp.ordering"].details["late_arrivals"] == 0
+    assert result.data_health == "HEALTHY"
 
 
 def test_all_rows_missing_required_column_is_critical() -> None:

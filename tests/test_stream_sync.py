@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
+from datetime import datetime, timedelta, timezone
 
 from stream_sync import (
     CursorState,
@@ -271,6 +272,46 @@ def test_degraded_runtime_result_with_valid_rows_is_processable_for_inference() 
     assert store.cursor == "cursor-1"
     assert store.validation_results[0].data_health == "DEGRADED"
     assert store.validation_results[0].prediction_readiness == "READY"
+
+
+def test_existing_identical_duplicates_are_not_rewritten_or_noisy() -> None:
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    existing_rows = [
+        ObservationRow(
+            "03000",
+            (start + timedelta(minutes=15 * index)).isoformat().replace("+00:00", "Z"),
+            100 + index % 7,
+        )
+        for index in range(3708)
+    ]
+    new_start = datetime(2026, 3, 1, tzinfo=timezone.utc)
+    new_rows = [
+        ObservationRow(
+            "03000",
+            (new_start + timedelta(minutes=15 * index)).isoformat().replace("+00:00", "Z"),
+            150 + index % 5,
+        )
+        for index in range(24)
+    ]
+    api = FakeApi({None: StreamPage(existing_rows + new_rows, "cursor-1")})
+    store = MemoryStore()
+    store.last_observed_at = "2026-02-15T00:00:00Z"
+    for row in existing_rows:
+        store.rows[(row.station_id, row.observed_at)] = row
+
+    result = sync_observation_stream(api, store, max_pages=1)
+    validation = store.validation_results[0]
+    checks = {check.check_name: check for check in validation.checks}
+
+    assert result.received == 3732
+    assert result.written == 24
+    assert store.rows_written == 24
+    assert len(validation.rows_to_write) == 24
+    assert len([event for event in validation.events if "duplicate_identical_existing" in event.reason_codes]) == 0
+    assert checks["runtime.duplicates.identical_existing"].actual_value == 3708
+    assert checks["runtime.duplicates.identical_existing"].severity == "pass"
+    assert checks["runtime.timestamp.ordering"].details["late_arrivals"] == 0
+    assert validation.data_health == "HEALTHY"
 
 
 def test_retry_after_write_failure_reuses_idempotent_validation_events() -> None:
