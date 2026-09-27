@@ -1,0 +1,134 @@
+{
+  "b_recent_12": 74.14351323232974,
+  "b_recent_6": 73.4044395982883,
+  "best_spec": {
+    "alpha": 1.0,
+    "clip_high": 2.5,
+    "clip_low": 0.35,
+    "g1_window": 8,
+    "g2_method": "ewma",
+    "g3_window": 8,
+    "name": "G2",
+    "use_g1": false,
+    "use_g2": true,
+    "use_g3": false
+  },
+  "cycles_lost_vs_f": 0,
+  "cycles_won_vs_f": 11,
+  "f_recent_12": 74.56105631098423,
+  "f_recent_6": 73.92915232923592,
+  "g_recent_12": 82.8554931937542,
+  "g_recent_6": 83.3856603540558,
+  "horizon_metrics": [
+    {
+      "delta_pp": 13.1574368248,
+      "f_accuracy": 70.3507964471,
+      "g_accuracy": 83.5082332719,
+      "horizon_minutes": 15
+    },
+    {
+      "delta_pp": 8.7625638612,
+      "f_accuracy": 72.2011520417,
+      "g_accuracy": 80.9637159028,
+      "horizon_minutes": 30
+    },
+    {
+      "delta_pp": 12.745029103,
+      "f_accuracy": 71.430043079,
+      "g_accuracy": 84.175072182,
+      "horizon_minutes": 45
+    },
+    {
+      "delta_pp": 9.8189310786,
+      "f_accuracy": 72.6341435222,
+      "g_accuracy": 82.4530746008,
+      "horizon_minutes": 60
+    }
+  ],
+  "leakage_check": "passed",
+  "level_shift_delta": 17.895185141564568,
+  "median_delta": 9.999516711895765,
+  "no_drift_delta": -0.9844943503696442,
+  "runtime_seconds": 133.30230059099995,
+  "stable_stations_max_regression": -0.7557924539155323,
+  "station_metrics": [
+    {
+      "b_accuracy": 87.9545096095,
+      "f_accuracy": 89.3145640195,
+      "g_accuracy": 88.8776212605,
+      "station_id": "02300"
+    },
+    {
+      "b_accuracy": 87.535599824,
+      "f_accuracy": 88.1089102788,
+      "g_accuracy": 87.562334284,
+      "station_id": "03000"
+    },
+    {
+      "b_accuracy": 72.7703229253,
+      "f_accuracy": 71.6185514006,
+      "g_accuracy": 72.1133381833,
+      "station_id": "05000"
+    },
+    {
+      "b_accuracy": 0.0,
+      "f_accuracy": 0.0,
+      "g_accuracy": 81.7089997638,
+      "station_id": "05100"
+    },
+    {
+      "b_accuracy": 75.5029892087,
+      "f_accuracy": 77.0721225499,
+      "g_accuracy": 87.9896359439,
+      "station_id": "06000"
+    },
+    {
+      "b_accuracy": 86.7148734287,
+      "f_accuracy": 86.7609988392,
+      "g_accuracy": 86.3359975522,
+      "station_id": "06111"
+    },
+    {
+      "b_accuracy": 87.9295956748,
+      "f_accuracy": 87.7092406934,
+      "g_accuracy": 86.9534482395,
+      "station_id": "07105"
+    },
+    {
+      "b_accuracy": 85.476703677,
+      "f_accuracy": 85.9050323581,
+      "g_accuracy": 86.0096075328,
+      "station_id": "07107"
+    },
+    {
+      "b_accuracy": 66.5502140501,
+      "f_accuracy": 67.7861912021,
+      "g_accuracy": 78.1418634124,
+      "station_id": "07111"
+    },
+    {
+      "b_accuracy": 85.5400962372,
+      "f_accuracy": 85.0721127825,
+      "g_accuracy": 87.8020365748,
+      "station_id": "09000"
+    },
+    {
+      "b_accuracy": 76.0489563879,
+      "f_accuracy": 76.3534947251,
+      "g_accuracy": 78.1922806465,
+      "station_id": "09122"
+    },
+    {
+      "b_accuracy": 79.6384051078,
+      "f_accuracy": 80.3098247596,
+      "g_accuracy": 83.8127850663,
+      "station_id": "10009"
+    }
+  ],
+  "synthetic_delta": 8.448883442623583,
+  "synthetic_drift_f": 78.41371176902308,
+  "synthetic_drift_g": 86.86259521164666,
+  "tests": "147 passed, 1 warning in 180.25s",
+  "trend_drift_delta": 8.31752372602746,
+  "worst_cycle_delta": 0.0
+}

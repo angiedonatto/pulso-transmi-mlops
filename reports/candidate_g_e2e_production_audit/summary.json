@@ -1,0 +1,25 @@
+{
+  "active_g_load": true,
+  "artifact": "repo://artifacts/shadow/candidate_g_v1",
+  "cold_runner_safe": true,
+  "data_cutoff_safe": true,
+  "end_to_end_production_path": "PASS",
+  "feedback_reconstruction": true,
+  "live_12_production_path": 82.8554931937542,
+  "live_6_production_path": 83.3856603540558,
+  "station_accuracy": {
+    "02300": 88.87762126050373,
+    "03000": 87.56233428399999,
+    "05000": 72.11333818330094,
+    "05100": 81.7089997637662,
+    "06000": 87.98963594394222,
+    "06111": 86.3359975522459,
+    "07105": 86.95344823946196,
+    "07107": 86.0096075327954,
+    "07111": 78.1418634123993,
+    "09000": 87.80203657475157,
+    "09122": 78.19228064653882,
+    "10009": 83.81278506634344
+  },
+  "submission_payload": true
+}

@@ -7,14 +7,23 @@ import pandas as pd
 import pytest
 
 from candidate_b_shadow import save_shadow_artifact, train_candidate_b_artifact
+from candidate_g_adaptive import (
+    MODEL_NAME as CANDIDATE_G_MODEL_NAME,
+    MODEL_TYPE as CANDIDATE_G_MODEL_TYPE,
+    CandidateGArtifact,
+    build_candidate_g_artifact,
+    save_candidate_g_artifact,
+)
 from cycle_predictions import (
     CyclePredictionError,
+    _load_artifact,
     _time_slot_payloads_for_targets,
     build_predictions,
     generate_cycle_predictions,
     validate_predictions,
 )
 from forecast_cycle_sync import CycleTarget, ForecastCycle
+from official_submission import StoredPrediction, build_submission_payload
 
 
 def cycle(expected_predictions: int = 2) -> ForecastCycle:
@@ -129,6 +138,47 @@ class CandidateStore(MemoryStore):
         return frame[frame["observed_at"] <= pd.Timestamp(data_cutoff)].copy()
 
 
+class CandidateGStore(CandidateStore):
+    def __init__(self, artifact_uri: str, feedback: list[dict] | None = None) -> None:
+        super().__init__(artifact_uri)
+        self.feedback = pd.DataFrame(feedback or [], columns=["station_id", "target_at", "base_prediction", "actual"])
+        self.feedback_cutoffs: list[str] = []
+
+    def load_active_champion(self):
+        test_trained_until = "2026-01-17T00:00:00Z"
+        return {
+            "model_id": "candidate-g-model",
+            "run_id": "run-g",
+            "model_name": CANDIDATE_G_MODEL_NAME,
+            "model_type": CANDIDATE_G_MODEL_TYPE,
+            "artifact_uri": self.artifact_uri,
+            "trained_until": test_trained_until,
+            "created_at": test_trained_until,
+            "is_active": True,
+            "pipeline_runs": {"started_at": test_trained_until, "git_commit": "test"},
+        }
+
+    def feedback_history_until(self, data_cutoff: str, model: dict) -> pd.DataFrame:
+        self.feedback_cutoffs.append(data_cutoff)
+        if self.feedback.empty:
+            return self.feedback.copy()
+        frame = self.feedback.copy()
+        frame["target_at"] = pd.to_datetime(frame["target_at"], utc=True)
+        return frame[frame["target_at"] <= pd.Timestamp(data_cutoff)].copy()
+
+    def predictions_for_cycle(self, cycle_id: str, model_id: str) -> list[StoredPrediction]:
+        return [
+            StoredPrediction(prediction.station_id, prediction.target_at, prediction.prediction)
+            for prediction in self.rows.values()
+        ]
+
+
+def candidate_g_artifact_uri(tmp_path: Path) -> str:
+    artifact_uri = str(tmp_path / "candidate_g_v1")
+    save_candidate_g_artifact(build_candidate_g_artifact(artifact_uri=artifact_uri), artifact_uri=artifact_uri)
+    return artifact_uri
+
+
 def test_no_open_cycle_finishes_without_predictions(tmp_path: Path) -> None:
     store = MemoryStore(artifact(tmp_path / "artifact.json"))
 
@@ -229,3 +279,77 @@ def test_active_candidate_b_artifact_generates_official_predictions(tmp_path: Pa
         ("03000", "2026-01-18T00:15:00Z"),
         ("02300", "2026-01-18T01:00:00Z"),
     ]
+
+
+def test_candidate_g_artifact_loading_is_explicit_and_self_contained(tmp_path: Path) -> None:
+    artifact_uri = candidate_g_artifact_uri(tmp_path)
+    artifact = _load_artifact(
+        {
+            "model_id": "candidate-g-model",
+            "artifact_uri": artifact_uri,
+            "model_type": CANDIDATE_G_MODEL_TYPE,
+            "is_active": True,
+        }
+    )
+
+    assert isinstance(artifact, CandidateGArtifact)
+    assert artifact.metadata["version"] == "candidate_g_v1"
+    assert artifact.metadata["base_model"]["name"] == "candidate_f_f4_profile_ratio"
+    assert artifact.metadata["adaptive_layer"]["alpha"] == 1.0
+    assert artifact.metadata["adaptive_layer"]["clip"] == [0.35, 2.5]
+
+
+def test_active_candidate_g_dispatches_through_official_prediction_path(tmp_path: Path) -> None:
+    store = CandidateGStore(candidate_g_artifact_uri(tmp_path))
+
+    result = generate_cycle_predictions(FakeApi(candidate_cycle()), store)
+    payload = build_submission_payload(candidate_cycle(), store.load_active_champion(), store.predictions_for_cycle(result.cycle_id or "", result.model_id or ""))
+
+    assert result.status == "predicted"
+    assert result.predictions_generated == candidate_cycle().expected_predictions
+    assert store.feedback_cutoffs == [candidate_cycle().data_cutoff]
+    assert len(payload["predictions"]) == candidate_cycle().expected_predictions
+    assert all(prediction.trace and prediction.trace["candidate"] == "candidate_g_v1" for prediction in store.rows.values())
+
+
+def test_candidate_g_feedback_uses_only_rows_at_or_before_cutoff(tmp_path: Path) -> None:
+    store = CandidateGStore(
+        candidate_g_artifact_uri(tmp_path),
+        feedback=[
+            {"station_id": "03000", "target_at": "2026-01-17T23:45:00Z", "base_prediction": 100.0, "actual": 200.0},
+            {"station_id": "03000", "target_at": "2026-01-18T00:15:00Z", "base_prediction": 100.0, "actual": 10.0},
+        ],
+    )
+
+    generate_cycle_predictions(FakeApi(candidate_cycle()), store)
+    station_prediction = next(prediction for prediction in store.rows.values() if prediction.station_id == "03000")
+
+    assert station_prediction.trace is not None
+    assert station_prediction.trace["feedback_samples"] == 1
+    assert station_prediction.trace["calibration_factor"] == pytest.approx(2.0)
+
+
+def test_candidate_g_cold_runner_reconstruction_is_deterministic(tmp_path: Path) -> None:
+    artifact_uri = candidate_g_artifact_uri(tmp_path)
+    feedback = [
+        {"station_id": "03000", "target_at": "2026-01-17T23:45:00Z", "base_prediction": 100.0, "actual": 150.0},
+        {"station_id": "02300", "target_at": "2026-01-17T23:45:00Z", "base_prediction": 200.0, "actual": 180.0},
+    ]
+    first = CandidateGStore(artifact_uri, feedback=feedback)
+    second = CandidateGStore(artifact_uri, feedback=feedback)
+
+    generate_cycle_predictions(FakeApi(candidate_cycle()), first)
+    generate_cycle_predictions(FakeApi(candidate_cycle()), second)
+
+    assert [row.prediction for row in first.rows.values()] == pytest.approx([row.prediction for row in second.rows.values()])
+    assert [row.trace for row in first.rows.values()] == [row.trace for row in second.rows.values()]
+
+
+def test_candidate_g_missing_feedback_falls_back_to_base_factor_one(tmp_path: Path) -> None:
+    store = CandidateGStore(candidate_g_artifact_uri(tmp_path), feedback=[])
+
+    generate_cycle_predictions(FakeApi(candidate_cycle()), store)
+
+    assert all(prediction.trace is not None for prediction in store.rows.values())
+    assert all(prediction.trace["calibration_factor"] == 1.0 for prediction in store.rows.values())
+    assert all(prediction.trace["feedback_samples"] == 0 for prediction in store.rows.values())

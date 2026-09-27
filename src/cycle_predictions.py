@@ -28,6 +28,7 @@ class CyclePrediction:
     target_at: str
     horizon_minutes: int
     prediction: float
+    trace: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -69,7 +70,8 @@ def generate_predictions_for_cycle(cycle: ForecastCycle, store: PredictionStore)
     model = store.load_active_champion()
     artifact = _load_artifact(model)
     observations = store.observations_until(cycle.data_cutoff)
-    predictions = build_predictions(cycle, model["model_id"], artifact, observations)
+    feedback_frame = _feedback_history_for_model(store, cycle, model, artifact)
+    predictions = build_predictions(cycle, model["model_id"], artifact, observations, feedback_frame=feedback_frame)
     validate_predictions(cycle, predictions)
     store.persist_cycle_targets(cycle)
     written = store.persist_predictions(cycle, model, predictions)
@@ -92,9 +94,11 @@ def build_predictions(
     model_id: str,
     artifact: Any,
     observations: pd.DataFrame,
+    *,
+    feedback_frame: pd.DataFrame | None = None,
 ) -> list[CyclePrediction]:
     if not isinstance(artifact, dict):
-        return _build_non_baseline_predictions(cycle, model_id, artifact, observations)
+        return _build_non_baseline_predictions(cycle, model_id, artifact, observations, feedback_frame=feedback_frame)
     if artifact.get("model_type") != MODEL_TYPE:
         raise CyclePredictionError(f"unsupported champion model_type: {artifact.get('model_type')!r}")
     frame = _prepare_observations(observations)
@@ -127,6 +131,7 @@ def build_predictions(
                 target_at=target.target_at,
                 horizon_minutes=target.horizon_minutes,
                 prediction=float(value),
+                trace=None,
             )
         )
     return predictions
@@ -219,6 +224,101 @@ class SupabaseCyclePredictionStore(SupabaseBaselineStore):
         response.raise_for_status()
         return len(predictions)
 
+    def feedback_history_until(self, data_cutoff: str, model: dict[str, Any]) -> pd.DataFrame:
+        try:
+            from candidate_g_adaptive import build_candidate_f_base_frame
+            from forecast_cycle_sync import CycleTarget, ForecastCycle
+        except ImportError as exc:
+            raise CyclePredictionError("candidate G feedback dependencies are unavailable") from exc
+
+        cutoff = pd.Timestamp(data_cutoff).tz_convert("UTC")
+        response = self._client.get(
+            "/predictions",
+            params={
+                "model_id": f"eq.{model['model_id']}",
+                "target_observed_at": f"lte.{_ts(cutoff)}",
+                "select": "cycle_id,station_id,target_observed_at",
+                "order": "target_observed_at.desc",
+                "limit": "2000",
+            },
+        )
+        response.raise_for_status()
+        prediction_rows = response.json()
+        if not prediction_rows:
+            return pd.DataFrame(columns=["station_id", "target_at", "base_prediction", "actual"])
+
+        observations = self.observations()
+        observations["station_id"] = observations["station_id"].astype(str)
+        observations["observed_at"] = pd.to_datetime(observations["observed_at"], utc=True)
+        observations = observations[observations["observed_at"] <= cutoff].copy()
+        actual_lookup = {
+            (str(row.station_id), _ts(row.observed_at)): float(row.demand)
+            for row in observations[["station_id", "observed_at", "demand"]].itertuples(index=False)
+        }
+        wanted = {
+            (str(row["cycle_id"]), str(row["station_id"]), _normalize_timestamp(row["target_observed_at"]))
+            for row in prediction_rows
+            if row.get("cycle_id")
+        }
+        by_cycle: dict[str, set[tuple[str, str]]] = {}
+        for cycle_id, station_id, target_at in wanted:
+            if (station_id, target_at) in actual_lookup:
+                by_cycle.setdefault(cycle_id, set()).add((station_id, target_at))
+        feedback_rows: list[dict[str, Any]] = []
+        for cycle_id, pairs in by_cycle.items():
+            cycle_response = self._client.get(
+                "/forecast_cycles",
+                params={"cycle_id": f"eq.{cycle_id}", "select": "cycle_id,data_cutoff,closes_at,expected_predictions", "limit": "1"},
+            )
+            cycle_response.raise_for_status()
+            cycle_rows = cycle_response.json()
+            if not cycle_rows:
+                continue
+            target_response = self._client.get(
+                "/forecast_cycle_targets",
+                params={
+                    "cycle_id": f"eq.{cycle_id}",
+                    "select": "station_id,target_at,horizon_minutes,target_order",
+                    "order": "target_order.asc",
+                },
+            )
+            target_response.raise_for_status()
+            target_rows = target_response.json()
+            cycle_row = cycle_rows[0]
+            historical_cycle = ForecastCycle(
+                cycle_id=str(cycle_id),
+                data_cutoff=_normalize_timestamp(cycle_row["data_cutoff"]),
+                closes_at=_normalize_timestamp(cycle_row["closes_at"]) if cycle_row.get("closes_at") else "",
+                expected_predictions=int(cycle_row["expected_predictions"]),
+                targets=[
+                    CycleTarget(
+                        station_id=str(row["station_id"]),
+                        target_at=_normalize_timestamp(row["target_at"]),
+                        horizon_minutes=int(row["horizon_minutes"]),
+                        target_order=int(row["target_order"]),
+                        raw_target={},
+                    )
+                    for row in target_rows
+                ],
+                raw_cycle={},
+            )
+            hist_cutoff = pd.Timestamp(historical_cycle.data_cutoff).tz_convert("UTC")
+            base = build_candidate_f_base_frame(historical_cycle, observations[observations["observed_at"] <= hist_cutoff].copy())
+            for row in base.itertuples(index=False):
+                target_at = _ts(row.target_at)
+                station_id = str(row.station_id)
+                if (station_id, target_at) not in pairs:
+                    continue
+                feedback_rows.append(
+                    {
+                        "station_id": station_id,
+                        "target_at": target_at,
+                        "base_prediction": float(row.base_prediction),
+                        "actual": actual_lookup[(station_id, target_at)],
+                    }
+                )
+        return pd.DataFrame(feedback_rows).sort_values(["station_id", "target_at"]).reset_index(drop=True)
+
     def _post_upsert(self, path: str, payload: Any, *, on_conflict: str) -> None:
         response = self._client.post(
             path,
@@ -238,8 +338,15 @@ def _load_artifact(model: dict[str, Any]) -> Any:
         raise CyclePredictionError("active champion missing artifact_uri")
     if artifact_uri.startswith("repo://") or Path(artifact_uri).is_dir():
         try:
+            from candidate_b_shadow import MODEL_TYPE as CANDIDATE_B_MODEL_TYPE
             from candidate_b_shadow import load_shadow_artifact
+            from candidate_g_adaptive import MODEL_TYPE as CANDIDATE_G_MODEL_TYPE
+            from candidate_g_adaptive import load_candidate_g_artifact
 
+            if model.get("model_type") == CANDIDATE_G_MODEL_TYPE:
+                return load_candidate_g_artifact(artifact_uri)
+            if model.get("model_type") == CANDIDATE_B_MODEL_TYPE:
+                return load_shadow_artifact(artifact_uri)
             return load_shadow_artifact(artifact_uri)
         except Exception as exc:
             raise CyclePredictionError(f"cannot load champion artifact: {artifact_uri}") from exc
@@ -256,12 +363,42 @@ def _build_non_baseline_predictions(
     model_id: str,
     artifact: Any,
     observations: pd.DataFrame,
+    *,
+    feedback_frame: pd.DataFrame | None = None,
 ) -> list[CyclePrediction]:
     try:
         from candidate_b_shadow import MODEL_TYPE as CANDIDATE_B_MODEL_TYPE
         from candidate_b_shadow import ShadowArtifact, ShadowCandidateError, build_shadow_predictions
+        from candidate_g_adaptive import MODEL_TYPE as CANDIDATE_G_MODEL_TYPE
+        from candidate_g_adaptive import CandidateGArtifact, build_candidate_g_predictions
     except ImportError as exc:
         raise CyclePredictionError("candidate model dependencies are unavailable") from exc
+    if isinstance(artifact, CandidateGArtifact):
+        if artifact.metadata.get("model_type") != CANDIDATE_G_MODEL_TYPE:
+            raise CyclePredictionError(f"unsupported candidate G model_type: {artifact.metadata.get('model_type')!r}")
+        try:
+            traced = build_candidate_g_predictions(cycle, model_id, artifact, observations, feedback_frame=feedback_frame)
+            return [
+                CyclePrediction(
+                    cycle_id=item.prediction.cycle_id,
+                    model_id=item.prediction.model_id,
+                    station_id=item.prediction.station_id,
+                    target_at=item.prediction.target_at,
+                    horizon_minutes=item.prediction.horizon_minutes,
+                    prediction=item.prediction.prediction,
+                    trace={
+                        "candidate": "candidate_g_v1",
+                        "base_prediction": item.base_prediction,
+                        "calibration_factor": item.calibration_factor,
+                        "final_prediction": item.prediction.prediction,
+                        "feedback_samples": item.feedback_samples,
+                        "data_cutoff": item.data_cutoff,
+                    },
+                )
+                for item in traced
+            ]
+        except ShadowCandidateError as exc:
+            raise CyclePredictionError(str(exc)) from exc
     if not isinstance(artifact, ShadowArtifact):
         raise CyclePredictionError(f"unsupported champion artifact type: {type(artifact).__name__}")
     if artifact.metadata.get("model_type") != CANDIDATE_B_MODEL_TYPE:
@@ -270,6 +407,24 @@ def _build_non_baseline_predictions(
         return build_shadow_predictions(cycle, model_id, artifact, observations)
     except ShadowCandidateError as exc:
         raise CyclePredictionError(str(exc)) from exc
+
+
+def _feedback_history_for_model(
+    store: PredictionStore,
+    cycle: ForecastCycle,
+    model: dict[str, Any],
+    artifact: Any,
+) -> pd.DataFrame | None:
+    try:
+        from candidate_g_adaptive import CandidateGArtifact
+    except ImportError:
+        return None
+    if not isinstance(artifact, CandidateGArtifact):
+        return None
+    reader = getattr(store, "feedback_history_until", None)
+    if reader is None:
+        return None
+    return reader(cycle.data_cutoff, model)
 
 
 def _time_slot_payloads_for_targets(cycle: ForecastCycle) -> list[dict[str, Any]]:
@@ -299,6 +454,12 @@ def _quarter_hour_block(timestamp: pd.Timestamp) -> int:
 
 def _ts(value: Any) -> str:
     return pd.Timestamp(value).tz_convert("UTC").isoformat().replace("+00:00", "Z")
+
+
+def _normalize_timestamp(value: Any) -> str:
+    if not isinstance(value, str) or not value:
+        raise CyclePredictionError("invalid timestamp")
+    return _ts(value)
 
 
 def _now_iso() -> str:
