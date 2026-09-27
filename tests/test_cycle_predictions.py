@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import httpx
 import pandas as pd
 import pytest
 
@@ -16,6 +17,7 @@ from candidate_g_adaptive import (
 )
 from cycle_predictions import (
     CyclePredictionError,
+    SupabaseCyclePredictionStore,
     _load_artifact,
     _time_slot_payloads_for_targets,
     build_predictions,
@@ -23,7 +25,7 @@ from cycle_predictions import (
     validate_predictions,
 )
 from forecast_cycle_sync import CycleTarget, ForecastCycle
-from official_submission import StoredPrediction, build_submission_payload
+from official_submission import StoredPrediction, build_submission_payload, run_official_cycle
 
 
 def cycle(expected_predictions: int = 2) -> ForecastCycle:
@@ -77,6 +79,47 @@ def candidate_cycle() -> ForecastCycle:
             CycleTarget("02300", "2026-01-18T01:00:00Z", 60, 1, {}),
         ],
         raw_cycle={},
+    )
+
+
+def candidate_48_cycle(*, cycle_id: str, data_cutoff: str) -> ForecastCycle:
+    cutoff = pd.Timestamp(data_cutoff).tz_convert("UTC")
+    targets = []
+    order = 0
+    for station_id in ["03000", "02300"]:
+        for step in range(1, 25):
+            target_at = cutoff + pd.Timedelta(minutes=15 * step)
+            targets.append(
+                CycleTarget(
+                    station_id,
+                    target_at.isoformat().replace("+00:00", "Z"),
+                    15 * step,
+                    order,
+                    {},
+                )
+            )
+            order += 1
+    return ForecastCycle(
+        cycle_id=cycle_id,
+        data_cutoff=data_cutoff,
+        closes_at=(cutoff + pd.Timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
+        expected_predictions=48,
+        targets=targets,
+        raw_cycle={},
+    )
+
+
+def production_shaped_candidate_observations(days: int = 20) -> pd.DataFrame:
+    frame = candidate_observations(days=days)
+    observed_at = pd.to_datetime(frame["observed_at"], utc=True)
+    local = observed_at.dt.tz_convert("America/Bogota")
+    return pd.DataFrame(
+        {
+            "station_id": frame["station_id"].astype(str),
+            "observed_at": observed_at,
+            "demand": frame["demand"].astype(float),
+            "quarter_hour_block": local.dt.hour * 4 + local.dt.minute // 15,
+        }
     )
 
 
@@ -171,6 +214,122 @@ class CandidateGStore(CandidateStore):
             StoredPrediction(prediction.station_id, prediction.target_at, prediction.prediction)
             for prediction in self.rows.values()
         ]
+
+
+class ProductionFeedbackClient:
+    def __init__(self, historical_cycle: ForecastCycle) -> None:
+        self.historical_cycle = historical_cycle
+
+    def get(self, path: str, *, params: dict[str, str]) -> httpx.Response:
+        if path == "/predictions":
+            return self._response(
+                path,
+                [
+                    {
+                        "cycle_id": self.historical_cycle.cycle_id,
+                        "station_id": target.station_id,
+                        "target_observed_at": target.target_at,
+                    }
+                    for target in self.historical_cycle.targets
+                ],
+            )
+        if path == "/forecast_cycles":
+            return self._response(
+                path,
+                [
+                    {
+                        "cycle_id": self.historical_cycle.cycle_id,
+                        "data_cutoff": self.historical_cycle.data_cutoff,
+                        "closes_at": self.historical_cycle.closes_at,
+                        "expected_predictions": self.historical_cycle.expected_predictions,
+                    }
+                ],
+            )
+        if path == "/forecast_cycle_targets":
+            return self._response(
+                path,
+                [
+                    {
+                        "station_id": target.station_id,
+                        "target_at": target.target_at,
+                        "horizon_minutes": target.horizon_minutes,
+                        "target_order": target.target_order,
+                    }
+                    for target in self.historical_cycle.targets
+                ],
+            )
+        raise AssertionError(f"unexpected GET path: {path}")
+
+    def _response(self, path: str, payload: list[dict]) -> httpx.Response:
+        return httpx.Response(200, json=payload, request=httpx.Request("GET", f"https://supabase.test/rest/v1{path}"))
+
+
+class ProductionCandidateGStore(SupabaseCyclePredictionStore):
+    def __init__(self, artifact_uri: str, observations_frame: pd.DataFrame, historical_cycle: ForecastCycle) -> None:
+        self.artifact_uri = artifact_uri
+        self.observations_frame = observations_frame
+        self._client = ProductionFeedbackClient(historical_cycle)
+        self.rows: dict[tuple[str, str, str], object] = {}
+        self.persisted_cycle: ForecastCycle | None = None
+        self.receipts: list[dict] = []
+
+    def load_active_champion(self):
+        trained_until = "2026-01-17T00:00:00Z"
+        return {
+            "model_id": "candidate-g-model",
+            "run_id": "run-g",
+            "model_name": CANDIDATE_G_MODEL_NAME,
+            "model_type": CANDIDATE_G_MODEL_TYPE,
+            "artifact_uri": self.artifact_uri,
+            "trained_until": trained_until,
+            "created_at": trained_until,
+            "is_active": True,
+            "pipeline_runs": {"started_at": trained_until, "git_commit": "test"},
+        }
+
+    def observations(self) -> pd.DataFrame:
+        return self.observations_frame.copy()
+
+    def observations_until(self, data_cutoff: str):
+        frame = self.observations()
+        frame["observed_at"] = pd.to_datetime(frame["observed_at"], utc=True)
+        return frame[frame["observed_at"] <= pd.Timestamp(data_cutoff)].copy()
+
+    def persist_cycle_targets(self, cycle: ForecastCycle) -> None:
+        self.persisted_cycle = cycle
+
+    def persist_predictions(self, cycle: ForecastCycle, model: dict, predictions: list) -> int:
+        self.rows = {
+            (prediction.cycle_id, prediction.station_id, prediction.target_at): prediction
+            for prediction in predictions
+        }
+        return len(predictions)
+
+    def official_receipt_exists(self, cycle_id: str) -> bool:
+        return False
+
+    def predictions_for_cycle(self, cycle_id: str, model_id: str) -> list[StoredPrediction]:
+        return [
+            StoredPrediction(prediction.station_id, prediction.target_at, prediction.prediction)
+            for prediction in self.rows.values()
+        ]
+
+    def persist_receipt(self, receipt: dict) -> None:
+        self.receipts.append(receipt)
+
+
+class FakeSubmissionApi(FakeApi):
+    def post_submission(self, payload: dict, *, idempotency_key: str) -> httpx.Response:
+        assert len(payload["predictions"]) == 48
+        return httpx.Response(
+            201,
+            json={
+                "submission_id": "sub-production-shaped",
+                "accepted_at": "2026-01-18T00:05:00Z",
+                "is_official": True,
+            },
+            request=httpx.Request("POST", "https://pulso.test/v1/submissions"),
+        )
 
 
 def candidate_g_artifact_uri(tmp_path: Path) -> str:
@@ -353,3 +512,21 @@ def test_candidate_g_missing_feedback_falls_back_to_base_factor_one(tmp_path: Pa
     assert all(prediction.trace is not None for prediction in store.rows.values())
     assert all(prediction.trace["calibration_factor"] == 1.0 for prediction in store.rows.values())
     assert all(prediction.trace["feedback_samples"] == 0 for prediction in store.rows.values())
+
+
+def test_candidate_g_production_feedback_reconstruction_reaches_submission(tmp_path: Path) -> None:
+    open_cycle = candidate_48_cycle(cycle_id="cycle-open", data_cutoff="2026-01-18T00:00:00Z")
+    historical_cycle = candidate_48_cycle(cycle_id="cycle-history", data_cutoff="2026-01-17T00:00:00Z")
+    store = ProductionCandidateGStore(
+        candidate_g_artifact_uri(tmp_path),
+        production_shaped_candidate_observations(),
+        historical_cycle,
+    )
+
+    result = run_official_cycle(FakeSubmissionApi(open_cycle), store, store)
+
+    assert result.status == "accepted"
+    assert result.submission_id == "sub-production-shaped"
+    assert len(store.rows) == 48
+    assert len(store.receipts) == 1
+    assert all(prediction.trace and prediction.trace["candidate"] == "candidate_g_v1" for prediction in store.rows.values())

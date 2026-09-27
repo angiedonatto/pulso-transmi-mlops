@@ -162,7 +162,8 @@ def build_candidate_g_predictions(
 
 def build_candidate_f_base_frame(cycle: ForecastCycle, observations: pd.DataFrame) -> pd.DataFrame:
     cutoff = pd.Timestamp(cycle.data_cutoff).tz_convert("UTC")
-    eligible = observations[observations["observed_at"] <= cutoff].copy()
+    eligible = _prepare_observations(observations)
+    eligible = eligible[eligible["observed_at"] <= cutoff].copy()
     if eligible.empty:
         raise ShadowCandidateError("no observations at or before data_cutoff")
     supervised = _training_samples(eligible, cutoff)
