@@ -1,0 +1,43 @@
+name: Shadow Candidate I
+
+# Shadow challenger for Candidate G (no leaderboard effect). Runs once per hour in its own
+# workflow and concurrency group, so it can never delay, fail or change Predict.
+# :27 sits ~30 min after the run that submits each official cycle (the :52 Predict slot,
+# which persists G's cycle around :58) and ~30 min before the next one, so GitHub cron
+# delays on either side still find the latest persisted G cycle. The script is idempotent:
+# a cycle that already has 48 Candidate I predictions is skipped.
+# PULSO_API_KEY is intentionally not provided: this job cannot call the submission API.
+on:
+  schedule:
+    - cron: "27 * * * *"
+
+  workflow_dispatch:
+
+concurrency:
+  group: shadow-candidate-i
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: python -m pip install -e .
+
+      - name: Run Candidate I shadow inference
+        timeout-minutes: 6
+        run: python scripts/run_candidate_i_shadow.py --time-budget 300

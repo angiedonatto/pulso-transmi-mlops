@@ -1,0 +1,63 @@
+{
+  "adaptive_layer": {
+    "clip": [
+      0.35,
+      2.5
+    ],
+    "kappa": 4.0,
+    "level_estimator": "g2_geomspace_0.2_1",
+    "level_window": 8,
+    "name": "snr_gated_level",
+    "noise_window": 32
+  },
+  "artifact_uri": "repo://artifacts/shadow/candidate_i_v1",
+  "base_model": {
+    "feature_schema": [
+      "station_code",
+      "horizon_minutes",
+      "target_hour",
+      "target_minute",
+      "target_day_of_week",
+      "target_is_weekend",
+      "target_quarter_hour_block",
+      "lag_15",
+      "lag_30",
+      "lag_45",
+      "lag_60",
+      "lag_96",
+      "lag_weekly",
+      "recent_mean",
+      "recent_median",
+      "profile_mean",
+      "profile_median"
+    ],
+    "hyperparameters": {
+      "l2_regularization": 0.05,
+      "learning_rate": 0.06,
+      "loss": "absolute_error",
+      "max_iter": 160,
+      "max_leaf_nodes": 31,
+      "random_state": 17
+    },
+    "model_family": "HistGradientBoostingRegressor",
+    "name": "candidate_f_f4_profile_ratio",
+    "refit": "every cycle, target_at <= data_cutoff",
+    "target_representation": "profile_ratio"
+  },
+  "created_at": "2026-09-28T00:02:07.579219Z",
+  "data_contract": {
+    "fallback_factor": 1.0,
+    "inputs": "observations <= data_cutoff only"
+  },
+  "git_commit": "023ef71ba79214ef593495335e2628cfc0018737",
+  "history": {
+    "hours": 24,
+    "name": "out_of_sample_daily_refit_f",
+    "refit": "1D",
+    "rule": "history slot predicted by F fit on target_at <= floor(history_cutoff, 1 day)"
+  },
+  "model_name": "candidate_i_f4_oos_g2_snr_gate",
+  "model_type": "shadow_f4_oos_g2_snr_gate",
+  "trained_until": "2026-09-13T11:00:00Z",
+  "version": "candidate_i_v1"
+}
