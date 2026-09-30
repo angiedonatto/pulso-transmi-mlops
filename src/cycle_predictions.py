@@ -222,7 +222,27 @@ class SupabaseCyclePredictionStore(SupabaseBaselineStore):
             ],
         )
         response.raise_for_status()
+        self._persist_prediction_traces(cycle.cycle_id, model_id, predictions)
         return len(predictions)
+
+    def _persist_prediction_traces(self, cycle_id: str, model_id: str, predictions: list[CyclePrediction]) -> None:
+        rows = prediction_trace_payloads(predictions)
+        delete_response = self._client.delete(
+            "/prediction_traces",
+            params={"cycle_id": f"eq.{cycle_id}", "model_id": f"eq.{model_id}"},
+        )
+        if delete_response.status_code == 404:
+            return
+        delete_response.raise_for_status()
+        if not rows:
+            return
+        response = self._client.post(
+            "/prediction_traces",
+            params={"on_conflict": "cycle_id,model_id,station_id,target_at"},
+            headers={"Prefer": "resolution=merge-duplicates"},
+            json=rows,
+        )
+        response.raise_for_status()
 
     def feedback_history_until(self, data_cutoff: str, model: dict[str, Any]) -> pd.DataFrame:
         try:
@@ -425,6 +445,29 @@ def _feedback_history_for_model(
     if reader is None:
         return None
     return reader(cycle.data_cutoff, model)
+
+
+def prediction_trace_payloads(predictions: list[CyclePrediction]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for prediction in predictions:
+        trace = prediction.trace or {}
+        if trace.get("candidate") != "candidate_g_v1":
+            continue
+        rows.append(
+            {
+                "cycle_id": prediction.cycle_id,
+                "model_id": prediction.model_id,
+                "station_id": prediction.station_id,
+                "target_at": prediction.target_at,
+                "horizon_minutes": prediction.horizon_minutes,
+                "base_prediction": trace.get("base_prediction"),
+                "calibration_factor": trace.get("calibration_factor"),
+                "final_prediction": trace.get("final_prediction", prediction.prediction),
+                "feedback_samples": trace.get("feedback_samples", 0),
+                "data_cutoff": trace.get("data_cutoff"),
+            }
+        )
+    return rows
 
 
 def _time_slot_payloads_for_targets(cycle: ForecastCycle) -> list[dict[str, Any]]:
