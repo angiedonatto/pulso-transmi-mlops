@@ -1,0 +1,62 @@
+name: Retrain Autopilot
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      threshold:
+        description: "Accuracy threshold that triggers drift remediation"
+        required: false
+        default: "82"
+      run_shadow:
+        description: "Run Candidate I shadow remediation when triggered"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: retrain-autopilot
+  cancel-in-progress: false
+
+jobs:
+  diagnose-and-remediate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      THRESHOLD: ${{ inputs.threshold || '82' }}
+      RUN_SHADOW: ${{ inputs.run_shadow || 'true' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: python -m pip install -e .
+
+      - name: Diagnose drift and run safe remediation
+        run: |
+          EXTRA_ARGS=""
+          if [ "$RUN_SHADOW" != "true" ]; then
+            EXTRA_ARGS="--no-shadow"
+          fi
+          python scripts/retrain_autopilot.py --threshold "$THRESHOLD" $EXTRA_ARGS
+
+      - name: Upload autopilot report
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrain-autopilot-report
+          path: reports/retrain_autopilot/
+          if-no-files-found: error
+
