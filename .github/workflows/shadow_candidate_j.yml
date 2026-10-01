@@ -1,0 +1,41 @@
+name: Shadow Candidate J
+
+on:
+  workflow_run:
+    workflows: ["Predict"]
+    types: [completed]
+    branches: [student-work]
+
+  workflow_dispatch:
+
+concurrency:
+  group: shadow-candidate-j
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: student-work
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: python -m pip install -e .
+
+      - name: Run Candidate J shadow inference
+        timeout-minutes: 8
+        run: python scripts/run_candidate_j_shadow.py --max-cycles 6

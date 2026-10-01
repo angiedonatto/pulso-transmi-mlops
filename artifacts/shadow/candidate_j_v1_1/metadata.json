@@ -1,0 +1,124 @@
+{
+  "champion_dependency": "candidate_g_f4_profile_ratio_g2_ewma",
+  "config": {
+    "g2_usefulness_window_hours": 24,
+    "global_shock_share": 0.75,
+    "hourly_offset": 20.0,
+    "min_day_consistency": 0.8,
+    "min_g2_usefulness_rows": 8,
+    "min_regime_hours_for_recent_profile": 24,
+    "require_realized_recent_profile_gain": true,
+    "shock_memory_hours": 3,
+    "version": "candidate_j_v1_1"
+  },
+  "decision_gate": {
+    "min_new_severe_shock_cycles": 12,
+    "or": "end of the shock and recovery observed"
+  },
+  "design_freeze": {
+    "design_data_end": "2026-09-18T10:00:00Z",
+    "oos_from_cutoff": "2026-09-18T10:00:00Z",
+    "replay_decision": "continue_shadow",
+    "replay_report": "reports/candidate_j/latest.md",
+    "rule": "J v1.1 must not be modified while its shadow evidence is collected"
+  },
+  "evidence": {
+    "double_adaptation": "0% cycle (cutoff 2026-09-18 01:00): base 1,531 already reacted, x2.5 factor -> 3,827 vs actual 450-1,317 at 07111",
+    "g2_fails_shock": "G2 effect -9.6 pp in regime_3; corr(factor, needed) ~ 0; 30% of rows at the 2.5 clip vs 0.2% in regime_2",
+    "g2_heterogeneous": "G2 effect by station in regime_2 ranges from -2.8 pp (07111) to +38.5 pp (03000)",
+    "g2_useful_sustained": "G2 adds +4.0 pp in regime_2 (corr(factor, needed) = 0.74), up to +38.5 pp at 03000 and +26 pp at 05100",
+    "keep_where_g_works": "the drift analysis recommends 'keep current behavior' where G already absorbs a sustained shift (6 stations at 86.8-92.2% in regime_2) and a recent-profile refit only where it does not",
+    "lag96_day1_day2": "lag_96 naive accuracy on day 1 of regime_2: 67.6% (0-42% at 02300/03000/05000/05100); day 2: 86.8% (ref 83.6-84.3%)",
+    "min_regime_length": "the drift analysis segments the global series with a 3 h minimum regime length; regime_3 has lasted >= 5 h",
+    "new_profile_repeats": "day-to-day profile correlation in regime_2: 0.82-0.98 (02300, 03000, 05000, 07111, 09122); 0.72 at 05100",
+    "normal_keep_g": "G reaches 83.3% (leaderboard formula) in regime_1 and 90.6-92.2% on the stations still stable in regime_2",
+    "per_station_null": "the drift analysis compares every station with its own stable range (per-station null windows)",
+    "shock_is_global": "regime_3 hits 12/12 stations; the analysis calls a change global when >= 75% of stations are affected",
+    "shock_short_lags": "regime_3 naive accuracy: lag_15 76.6%, lag_30 59.9%, lag_60 32.1%, lag_96 29.4%, weekly 23.0% vs G 26.0% and base F 38.5%",
+    "v1_replay_diagnosis": "post-hoc: in the J v1 replay the recent-profile path cost -4.9 pp at 07107 and -5.2 pp at 06000 in phase 1 (stations where G worked) while gaining +4.3 pp overall on its rows in phase 2"
+  },
+  "label": "Candidate J v1.1 / regime-aware (shadow)",
+  "mode": "shadow",
+  "model_name": "candidate_j_v1_1_regime_aware",
+  "model_type": "shadow_regime_aware_candidate_j",
+  "thresholds": {
+    "calibration_end": "2026-09-04T22:00:00Z",
+    "calibration_start": "2026-08-25T06:00:00Z",
+    "per_station": {
+      "02300": {
+        "dispersion24_max": 0.196959598195979,
+        "hour_anomaly_abs_max": 0.5884660127543333,
+        "jump_abs_max": 0.8213033596851896,
+        "level24_abs_max": 0.08637663144134755
+      },
+      "03000": {
+        "dispersion24_max": 0.1359628911698575,
+        "hour_anomaly_abs_max": 0.32642190076771144,
+        "jump_abs_max": 0.47934786877327185,
+        "level24_abs_max": 0.07532645652402659
+      },
+      "05000": {
+        "dispersion24_max": 0.12133648655565304,
+        "hour_anomaly_abs_max": 0.3123180935478389,
+        "jump_abs_max": 0.46303007140179797,
+        "level24_abs_max": 0.0758309003124975
+      },
+      "05100": {
+        "dispersion24_max": 0.12265860440347034,
+        "hour_anomaly_abs_max": 0.2719243802023463,
+        "jump_abs_max": 0.40335473348670503,
+        "level24_abs_max": 0.05617982853384731
+      },
+      "06000": {
+        "dispersion24_max": 0.1282526625624901,
+        "hour_anomaly_abs_max": 0.28112362296575916,
+        "jump_abs_max": 0.4922093610872361,
+        "level24_abs_max": 0.07593663047953998
+      },
+      "06111": {
+        "dispersion24_max": 0.17409657201114678,
+        "hour_anomaly_abs_max": 0.4781479441874214,
+        "jump_abs_max": 0.6203965554011523,
+        "level24_abs_max": 0.10402645899916106
+      },
+      "07105": {
+        "dispersion24_max": 0.15411387757852343,
+        "hour_anomaly_abs_max": 0.41780006626611566,
+        "jump_abs_max": 0.6153658207031873,
+        "level24_abs_max": 0.11438132227223409
+      },
+      "07107": {
+        "dispersion24_max": 0.13106873368140867,
+        "hour_anomaly_abs_max": 0.41356641823890133,
+        "jump_abs_max": 0.5829274445839189,
+        "level24_abs_max": 0.09932394408993415
+      },
+      "07111": {
+        "dispersion24_max": 0.11104785325955784,
+        "hour_anomaly_abs_max": 0.24828474326130437,
+        "jump_abs_max": 0.40417120339427337,
+        "level24_abs_max": 0.07170125330756981
+      },
+      "09000": {
+        "dispersion24_max": 0.12934123825795965,
+        "hour_anomaly_abs_max": 0.29462512668571245,
+        "jump_abs_max": 0.40056101635250757,
+        "level24_abs_max": 0.05946279209240494
+      },
+      "09122": {
+        "dispersion24_max": 0.14522757566539723,
+        "hour_anomaly_abs_max": 0.4344526449814166,
+        "jump_abs_max": 0.5710281799871673,
+        "level24_abs_max": 0.07580940867915063
+      },
+      "10009": {
+        "dispersion24_max": 0.1745007418042334,
+        "hour_anomaly_abs_max": 0.41648252780772127,
+        "jump_abs_max": 0.5358160606384941,
+        "level24_abs_max": 0.11636615061782644
+      }
+    },
+    "samples": 3084
+  },
+  "version": "candidate_j_v1_1"
+}
