@@ -1,0 +1,8 @@
+# Candidate K v2.1 shadow runtime (Linux CI only, see .github/workflows/shadow_candidate_k.yml).
+# CPU-only PyTorch wheel (~180 MB instead of the multi-GB CUDA build), pinned to the version that
+# produced the K v2.1 experiment; torch 2.2.2 is built against numpy 1.x.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
+numpy==1.26.4
+pandas==2.2.3
+httpx>=0.28,<1

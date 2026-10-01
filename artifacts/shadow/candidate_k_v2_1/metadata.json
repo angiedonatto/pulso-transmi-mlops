@@ -1,0 +1,119 @@
+{
+  "comparison": {
+    "against": [
+      "candidate_j_v1_1_regime_aware",
+      "baseline_latest"
+    ],
+    "metric": "leaderboard mean_station_accuracy (drift_monitor.accuracy_summary)"
+  },
+  "config": {
+    "architecture": "staged_re",
+    "augmentation_prob": 0.5,
+    "baseline_weeks": 4,
+    "batch_size": 1024,
+    "blocks": 2,
+    "dropout": 0.1,
+    "epochs": 10,
+    "hidden": 128,
+    "horizons": 4,
+    "level_factor": [
+      0.2,
+      5.0
+    ],
+    "lookback": 48,
+    "lr": 0.002,
+    "min_onset": 4,
+    "period_slots": [
+      4.0,
+      64.0
+    ],
+    "profile_days": 7,
+    "scale_window": 672,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "station_embedding": 4,
+    "weight_decay": 0.0001
+  },
+  "design_freeze": {
+    "design_data_end": "2026-09-18T19:00:00Z",
+    "experiment_report": "reports/candidate_k/latest.md",
+    "oos_from_cutoff": "2026-09-18T19:00:00Z",
+    "rule": "K v2.1 must not be modified or tuned while its shadow evidence is collected"
+  },
+  "experiment": {
+    "parity_reference": {
+      "cycles": 14,
+      "refit_at": "2026-09-18T05:00:00Z",
+      "rows": 2016
+    },
+    "runs_sha256": "4d1e4406d333ef0e62d35c9457ca005c533b0578a121e112ec2fc44228572a39",
+    "snapshot_manifest": {
+      "rows": 62892,
+      "sha256": "7db9d0acbe67d2157c852a06f8fe666eaba8faf24119751143face7c84bfe11e"
+    },
+    "summary": "reports/candidate_k/summary.json",
+    "variant": "k_staged_re"
+  },
+  "files": {
+    "local_pretrained.pt": "354956e22ed412071b487539487fd7c61c62004ebf182017dc04ba7c97450504",
+    "parity_reference.csv": "356e7865204fdc1f49c6fc40b7ffe612f77caf64773b5949b7fafa15c02b751f",
+    "src/candidate_k_deep.py": "608873a7d4bcb8f902d3d28b51b95cb493cce12df4eca18af6751dd22ca196f0"
+  },
+  "label": "Candidate K v2.1 / regime-robust deep learning (shadow)",
+  "local_pretrain": {
+    "data": "synthetic_series only (candidate_k_deep.synthetic_series); no observation is used",
+    "pretrain": {
+      "epochs": 24,
+      "lookback": 32,
+      "per_epoch": 200000,
+      "seed": 0
+    },
+    "seconds": 350.3,
+    "sha256": "354956e22ed412071b487539487fd7c61c62004ebf182017dc04ba7c97450504"
+  },
+  "mode": "shadow",
+  "model_name": "candidate_k_v2_1_regime_robust_dl",
+  "model_type": "shadow_deep_candidate_k",
+  "parity": {
+    "accuracy_diff_pp": 9.695681626453734e-07,
+    "checked_at": "2026-10-01T15:17:49.803407+00:00",
+    "cycles": 14,
+    "experiment_mean_station_accuracy": 74.68695252667634,
+    "identical": false,
+    "max_abs_rel_diff": 1.786903993718278e-06,
+    "median_abs_rel_diff": 5.6524035097380696e-08,
+    "observations": "data/interim/candidate_k/snapshot/observations.csv",
+    "platform": "darwin",
+    "refit_at": "2026-09-18T05:00:00Z",
+    "rows": 672,
+    "runtime_mean_station_accuracy": 74.6869534962445,
+    "seconds": 94.8,
+    "torch": "2.2.2",
+    "train_rows": 30228
+  },
+  "procedure": {
+    "architecture": "staged_re",
+    "ensemble": "median over seeds",
+    "gate_epochs": 6,
+    "history_start": "2026-07-26T05:00:00Z",
+    "local_lookback": 32,
+    "refit": "from scratch every day at 05:00Z (00:00 America/Bogota) on samples whose 4 targets are observed by then",
+    "refit_hour_utc": 5,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "synthetic_prob": 0.35,
+    "torch_threads": 1,
+    "train_stride_anchor": "2026-07-26T05:00:00Z",
+    "train_stride_slots": 2
+  },
+  "promotion": "manual decision only; no automatic promotion",
+  "version": "candidate_k_v2_1"
+}

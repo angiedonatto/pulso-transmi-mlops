@@ -1,0 +1,88 @@
+name: Shadow Candidate K
+
+# Candidate K v2.1 (deep learning, frozen) in SHADOW: it never submits and never changes the
+# champion. Separate workflow and concurrency group, so it can never delay, fail or change Predict.
+# PULSO_API_KEY is intentionally not provided; the job also refuses to run if it is present.
+#
+# One job, cheap when idle (private-repo minutes): a light step (no PyTorch) looks for post-freeze
+# cycles whose data_cutoff is already observed and that lack 48 Candidate K predictions; only then
+# the CPU-only PyTorch runtime is installed and those cycles are predicted, oldest first. Daily
+# refits (05:00Z) are trained once and kept in the Actions cache, so the other cycles of the day
+# only run inference. :55 is a few minutes after the Predict run that opens and submits each cycle
+# (cron 45,50); a delayed or failed run is caught up by the next one (the script is idempotent).
+on:
+  schedule:
+    - cron: "55 * * * *"
+
+  workflow_dispatch:
+    inputs:
+      verify_parity:
+        description: "Also retrain the 2026-09-18 05:00Z refit and compare it with the K v2.1 experiment"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shadow-candidate-k
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache key of the frozen K spec
+        id: spec
+        run: echo "key=candidate-k-v2_1-${{ hashFiles('artifacts/shadow/candidate_k_v2_1/metadata.json', 'src/candidate_k_deep.py', 'src/candidate_k_runtime.py') }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/candidate-k-shadow.txt
+
+      - name: Install light dependencies (no PyTorch)
+        run: python -m pip install "numpy==1.26.4" "pandas==2.2.3" "httpx>=0.28,<1"
+
+      - name: Look for pending Candidate K cycles
+        id: check
+        run: python scripts/run_candidate_k_shadow.py --check-only --github-output "$GITHUB_OUTPUT"
+
+      - name: Install CPU-only PyTorch runtime
+        if: ${{ steps.check.outputs.pending == 'true' || inputs.verify_parity }}
+        run: python -m pip install -r requirements/candidate-k-shadow.txt
+
+      - name: Restore trained refits
+        if: ${{ steps.check.outputs.pending == 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: .candidate_k_cache
+          key: ${{ steps.spec.outputs.key }}-${{ github.run_id }}
+          restore-keys: ${{ steps.spec.outputs.key }}-
+
+      - name: Run Candidate K shadow inference
+        id: shadow
+        if: ${{ steps.check.outputs.pending == 'true' }}
+        timeout-minutes: 30
+        run: python scripts/run_candidate_k_shadow.py --cache-dir .candidate_k_cache --max-cycles 12 --github-output "$GITHUB_OUTPUT"
+
+      - name: Save trained refits
+        if: ${{ always() && steps.shadow.outputs.cache_updated == 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .candidate_k_cache
+          key: ${{ steps.spec.outputs.key }}-${{ github.run_id }}
+
+      - name: Verify parity with the K v2.1 experiment
+        if: ${{ inputs.verify_parity }}
+        timeout-minutes: 10
+        run: python scripts/verify_candidate_k_parity.py --from-supabase

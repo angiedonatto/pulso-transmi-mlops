@@ -1,0 +1,17 @@
+{
+  "accuracy_diff_pp": 9.695681626453734e-07,
+  "checked_at": "2026-10-01T15:17:49.803407+00:00",
+  "cycles": 14,
+  "experiment_mean_station_accuracy": 74.68695252667634,
+  "identical": false,
+  "max_abs_rel_diff": 1.786903993718278e-06,
+  "median_abs_rel_diff": 5.6524035097380696e-08,
+  "observations": "data/interim/candidate_k/snapshot/observations.csv",
+  "platform": "darwin",
+  "refit_at": "2026-09-18T05:00:00Z",
+  "rows": 672,
+  "runtime_mean_station_accuracy": 74.6869534962445,
+  "seconds": 94.8,
+  "torch": "2.2.2",
+  "train_rows": 30228
+}
