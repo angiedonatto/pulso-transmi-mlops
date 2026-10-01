@@ -20,6 +20,9 @@ class CyclePredictionError(RuntimeError):
     """Raised when cycle predictions cannot be generated safely."""
 
 
+CANDIDATE_K_TRACE = "candidate_k_v2_1"  # candidate_k_shadow.MODEL_VERSION, without importing it here
+
+
 @dataclass(frozen=True)
 class CyclePrediction:
     cycle_id: str
@@ -70,19 +73,28 @@ def generate_predictions_for_cycle(cycle: ForecastCycle, store: PredictionStore,
     model = model or store.load_active_champion()
     artifact = _load_artifact(model)
     observations = store.observations_until(cycle.data_cutoff)
-    dependency_model: dict[str, Any] | None = None
-    dependency_predictions: list[CyclePrediction] | None = None
-    if _is_candidate_j_model(model):
+    dependencies: list[tuple[dict[str, Any], list[CyclePrediction]]] = []
+    candidate_k = _is_candidate_k_model(model)
+    if candidate_k:
+        predictions, dependencies = _build_candidate_k_official_predictions(cycle, model, artifact, observations, store)
+    elif _is_candidate_j_model(model):
         predictions, dependency_model, dependency_predictions = _build_candidate_j_official_predictions(
             cycle, model, artifact, observations, store
         )
+        dependencies = [(dependency_model, dependency_predictions)]
     else:
         feedback_frame = _feedback_history_for_model(store, cycle, model, artifact)
         predictions = build_predictions(cycle, model["model_id"], artifact, observations, feedback_frame=feedback_frame)
     validate_predictions(cycle, predictions)
     store.persist_cycle_targets(cycle)
-    if dependency_model is not None and dependency_predictions is not None:
-        store.persist_predictions(cycle, dependency_model, dependency_predictions)
+    for dependency_model, dependency_predictions in dependencies:
+        if not candidate_k:
+            store.persist_predictions(cycle, dependency_model, dependency_predictions)
+            continue
+        try:  # K's dependencies keep J rollback-ready; a failed write must not cost K's submission
+            store.persist_predictions(cycle, dependency_model, dependency_predictions)
+        except Exception as exc:  # noqa: BLE001
+            _warn("Candidate K dependency not persisted", f"{dependency_model.get('model_id')}: {type(exc).__name__}: {exc}")
     written = store.persist_predictions(cycle, model, predictions)
     values = [prediction.prediction for prediction in predictions]
     return CyclePredictionResult(
@@ -431,7 +443,11 @@ def _load_artifact(model: dict[str, Any]) -> Any:
             from candidate_g_adaptive import load_candidate_g_artifact
             from candidate_j_shadow import MODEL_TYPE as CANDIDATE_J_MODEL_TYPE
             from candidate_j_shadow import load_artifact as load_candidate_j_artifact
+            from candidate_k_shadow import MODEL_TYPE as CANDIDATE_K_MODEL_TYPE
+            from candidate_k_shadow import load_artifact as load_candidate_k_artifact
 
+            if model.get("model_type") == CANDIDATE_K_MODEL_TYPE:
+                return load_candidate_k_artifact(artifact_uri)
             if model.get("model_type") == CANDIDATE_G_MODEL_TYPE:
                 return load_candidate_g_artifact(artifact_uri)
             if model.get("model_type") == CANDIDATE_B_MODEL_TYPE:
@@ -447,6 +463,122 @@ def _load_artifact(model: dict[str, Any]) -> Any:
         raise CyclePredictionError(f"cannot read champion artifact: {artifact_uri}") from exc
     except json.JSONDecodeError as exc:
         raise CyclePredictionError(f"invalid champion artifact JSON: {artifact_uri}") from exc
+
+
+def _is_candidate_k_model(model: dict[str, Any]) -> bool:
+    try:
+        from candidate_k_shadow import MODEL_TYPE as CANDIDATE_K_MODEL_TYPE
+    except ImportError:
+        return False
+    return model.get("model_type") == CANDIDATE_K_MODEL_TYPE
+
+
+def _build_candidate_k_official_predictions(
+    cycle: ForecastCycle,
+    model: dict[str, Any],
+    artifact: dict[str, Any],
+    observations: pd.DataFrame,
+    store: PredictionStore,
+) -> tuple[list[CyclePrediction], list[tuple[dict[str, Any], list[CyclePrediction]]]]:
+    """Official Candidate K v2.1 (the frozen model that ran in shadow).
+
+    J v1.1 (with its G dependency) is computed first and returned as dependencies, so J and G keep
+    their predictions and traces current under their own inactive model_ids: J stays ready for an
+    immediate rollback and is K's fallback. K then runs with the frozen runtime. If K fails, J's
+    values are submitted under K's model_id (the champion pinned for the whole run), traced as a
+    fallback. Only if K and J both fail is there nothing to submit.
+    """
+    import candidate_j_shadow as cjs
+
+    dependencies: list[tuple[dict[str, Any], list[CyclePrediction]]] = []
+    j_predictions: list[CyclePrediction] | None = None
+    j_error: str | None = None
+    try:
+        j_model = store.load_model_by_name(cjs.MODEL_NAME)  # type: ignore[attr-defined]
+        j_artifact = cjs.load_artifact(str(j_model["artifact_uri"]))
+        j_predictions, g_model, g_predictions = _build_candidate_j_official_predictions(cycle, j_model, j_artifact, observations, store)
+        validate_predictions(cycle, j_predictions)
+        dependencies = [(g_model, g_predictions), (j_model, j_predictions)]
+    except Exception as exc:  # noqa: BLE001 - J is the fallback, never a reason to skip K
+        j_predictions, j_error = None, f"{type(exc).__name__}: {exc}"
+        _warn("Candidate J (K fallback) unavailable this cycle", j_error)
+
+    try:
+        predictions = _candidate_k_cycle_predictions(cycle, model, artifact, observations)
+        validate_predictions(cycle, predictions)
+        return predictions, dependencies
+    except Exception as exc:  # noqa: BLE001 - K must never cost an official submission while J works
+        k_error = f"{type(exc).__name__}: {exc}"
+        if j_predictions is None:
+            raise CyclePredictionError(f"Candidate K failed ({k_error}) and its J fallback is unavailable ({j_error})") from exc
+        _warn("Candidate K failed; submitting J values under K's model_id", k_error)
+        cutoff = _ts(cycle.data_cutoff)
+        fallback = [
+            CyclePrediction(
+                cycle_id=prediction.cycle_id,
+                model_id=str(model["model_id"]),
+                station_id=prediction.station_id,
+                target_at=prediction.target_at,
+                horizon_minutes=prediction.horizon_minutes,
+                prediction=prediction.prediction,
+                trace={"candidate": CANDIDATE_K_TRACE, "path": "fallback_j", "fallback_reason": k_error,
+                       "seasonal_prediction": prediction.prediction, "seasonal_weight": None, "train_rows": 0, "data_cutoff": cutoff},
+            )
+            for prediction in j_predictions
+        ]
+        return fallback, dependencies
+
+
+def _candidate_k_predictor(model: dict[str, Any], artifact: dict[str, Any]) -> Any:
+    """The frozen K v2.1 runtime (PyTorch); daily refits are shared through CANDIDATE_K_CACHE_DIR."""
+    import candidate_k_shadow as cks
+    from candidate_k_runtime import FrozenKPredictor
+
+    return FrozenKPredictor(artifact, cks.artifact_dir(str(model["artifact_uri"])), os.environ.get("CANDIDATE_K_CACHE_DIR") or None)
+
+
+def _candidate_k_cycle_predictions(cycle: ForecastCycle, model: dict[str, Any], artifact: dict[str, Any], observations: pd.DataFrame) -> list[CyclePrediction]:
+    import candidate_k_shadow as cks
+
+    cutoff = pd.Timestamp(cycle.data_cutoff).tz_convert("UTC")
+    targets = cks._normalize_targets(pd.DataFrame(
+        [{"station_id": t.station_id, "target_at": t.target_at, "horizon_minutes": t.horizon_minutes} for t in cycle.targets]
+    ))
+    history = cks._normalize_observations(observations[["station_id", "observed_at", "demand"]])
+    history = history[(history["observed_at"] >= pd.Timestamp(cks.HISTORY_START)) & (history["observed_at"] <= cutoff)]
+    frame, info = _candidate_k_predictor(model, artifact).predict(history, cutoff, targets)
+    frame = cks.validate_cycle_output(frame, targets)
+    if info.get("trained"):
+        _mark_candidate_k_cache_updated()
+    by_target = {(str(row.station_id), _ts(row.target_at)): row for row in frame.itertuples(index=False)}
+    predictions = []
+    for target in cycle.targets:
+        row = by_target[(str(target.station_id), _ts(target.target_at))]
+        predictions.append(
+            CyclePrediction(
+                cycle_id=cycle.cycle_id,
+                model_id=str(model["model_id"]),
+                station_id=str(target.station_id),
+                target_at=target.target_at,
+                horizon_minutes=int(target.horizon_minutes),
+                prediction=float(row.k_prediction),
+                trace={"candidate": CANDIDATE_K_TRACE, "path": "k", "seasonal_prediction": float(row.k_seasonal_prediction),
+                       "seasonal_weight": float(row.k_seasonal_weight), "train_rows": int(info.get("train_rows", 0)),
+                       "refit_at": info.get("refit_at"), "data_cutoff": _ts(cutoff)},
+            )
+        )
+    return predictions
+
+
+def _mark_candidate_k_cache_updated() -> None:
+    cache_dir = os.environ.get("CANDIDATE_K_CACHE_DIR")
+    if cache_dir:
+        Path(cache_dir).mkdir(parents=True, exist_ok=True)
+        (Path(cache_dir) / "UPDATED").write_text(_now_iso() + "\n")
+
+
+def _warn(title: str, message: str) -> None:
+    print(f"::warning title={title}::{message}", flush=True)
 
 
 def _is_candidate_j_model(model: dict[str, Any]) -> bool:
@@ -684,6 +816,24 @@ def prediction_trace_payloads(predictions: list[CyclePrediction]) -> list[dict[s
     rows: list[dict[str, Any]] = []
     for prediction in predictions:
         trace = prediction.trace or {}
+        if trace.get("candidate") == CANDIDATE_K_TRACE:
+            # same convention as the K shadow: base = seasonal expert (or J on fallback),
+            # calibration_factor = gate weight on the seasonal expert, feedback_samples = refit samples
+            rows.append(
+                {
+                    "cycle_id": prediction.cycle_id,
+                    "model_id": prediction.model_id,
+                    "station_id": prediction.station_id,
+                    "target_at": prediction.target_at,
+                    "horizon_minutes": prediction.horizon_minutes,
+                    "base_prediction": trace.get("seasonal_prediction"),
+                    "calibration_factor": trace.get("seasonal_weight"),
+                    "final_prediction": prediction.prediction,
+                    "feedback_samples": int(trace.get("train_rows") or 0),
+                    "data_cutoff": trace.get("data_cutoff"),
+                }
+            )
+            continue
         if trace.get("candidate") != "candidate_g_v1":
             continue
         rows.append(

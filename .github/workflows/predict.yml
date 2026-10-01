@@ -12,25 +12,69 @@ concurrency:
 jobs:
   predict:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # 15 min: once a day (first cycle after 05:00Z) a Candidate K champion trains its daily refit
+    timeout-minutes: 15
     env:
       PULSO_API_KEY: ${{ secrets.PULSO_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      CANDIDATE_K_CACHE_DIR: .candidate_k_cache
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache key of the frozen Candidate K spec
+        id: kspec
+        run: echo "key=candidate-k-v2_1-${{ hashFiles('artifacts/shadow/candidate_k_v2_1/metadata.json', 'src/candidate_k_deep.py', 'src/candidate_k_runtime.py') }}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: |
+            pyproject.toml
+            requirements/candidate-k-shadow.txt
 
       - name: Install dependencies
         run: python -m pip install -e .
 
+      # Candidate K (deep learning) needs the CPU-only PyTorch runtime, installed only while K is the
+      # active champion. A failed lookup prepares it anyway: this step never blocks Predict.
+      - name: Detect Candidate K champion
+        id: champion
+        run: |
+          python - <<'PY'
+          import os
+
+          from candidate_k_shadow import MODEL_TYPE
+          from champion_baseline import SupabaseBaselineStore
+
+          k_active = "true"
+          try:
+              with SupabaseBaselineStore() as store:
+                  k_active = "true" if store.load_active_champion().get("model_type") == MODEL_TYPE else "false"
+          except Exception as exc:  # noqa: BLE001
+              print(f"::warning title=Champion lookup failed::{type(exc).__name__}: {exc}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"k_active={k_active}\n")
+          print(f"k_active={k_active}")
+          PY
+
+      - name: Install Candidate K runtime (CPU-only PyTorch)
+        if: ${{ steps.champion.outputs.k_active == 'true' }}
+        run: python -m pip install -r requirements/candidate-k-shadow.txt
+
+      # Same cache as the Candidate K shadow job: the daily refit is trained once and reused.
+      - name: Restore Candidate K refits
+        if: ${{ steps.champion.outputs.k_active == 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: .candidate_k_cache
+          key: ${{ steps.kspec.outputs.key }}-${{ github.run_id }}
+          restore-keys: ${{ steps.kspec.outputs.key }}-
+
       - name: Sync stream, generate predictions and submit official cycle
         run: |
+          rm -f "$CANDIDATE_K_CACHE_DIR/UPDATED"
           python - <<'PY'
           from cycle_predictions import SupabaseCyclePredictionStore
           from official_submission import PulsoSubmissionApi, SupabaseSubmissionStore, run_official_cycle
@@ -51,6 +95,13 @@ jobs:
               f"submission_id={result.submission_id}"
             )
           PY
+
+      - name: Save Candidate K refits
+        if: ${{ always() && steps.champion.outputs.k_active == 'true' && hashFiles('.candidate_k_cache/UPDATED') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .candidate_k_cache
+          key: ${{ steps.kspec.outputs.key }}-${{ github.run_id }}
 
       - name: Generate monitoring snapshot
         run: python scripts/run_monitoring_snapshot.py

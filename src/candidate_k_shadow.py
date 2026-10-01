@@ -382,8 +382,11 @@ def run_candidate_k_shadow(
         if model is None:
             return ShadowRunResult(status="not_registered", reason="register Candidate K first (scripts/register_candidate_k_shadow.py --apply)")
         model_id = str(model["model_id"])
+        if model.get("is_active") is True:
+            # promoted: Predict produces and submits K's rows; the shadow job must never touch them
+            return ShadowRunResult(status="champion_active", model_id=model_id, reason="Candidate K is the active champion; Predict owns its predictions")
         if model.get("is_active") is not False:
-            return ShadowRunResult(status="refused", model_id=model_id, reason="Candidate K is active; shadow mode requires is_active=false")
+            return ShadowRunResult(status="refused", model_id=model_id, reason="Candidate K is_active is not a boolean; refusing to run")
         cycles = store.cycles_since(OOS_FROM_CUTOFF)
         if cycle_id is not None:
             cycles = cycles[cycles["cycle_id"] == cycle_id]
@@ -434,13 +437,13 @@ def _run_cycle(store: SupabaseCandidateKShadowStore, predictor: Predictor, model
 
 
 def validate_cycle_output(frame: pd.DataFrame, targets: pd.DataFrame) -> pd.DataFrame:
-    """Exactly the cycle's 48 (station, target) pairs, finite and non-negative."""
+    """Exactly the cycle's (station, target) pairs (48 in a real cycle), finite and non-negative."""
     out = frame.copy()
     out["station_id"] = out["station_id"].astype(str).str.zfill(5)
     out["target_at"] = pd.to_datetime(out["target_at"], utc=True)
     wanted = set(zip(targets["station_id"], targets["target_at"]))
     got = list(zip(out["station_id"], out["target_at"]))
-    if len(got) != EXPECTED_PREDICTIONS or len(set(got)) != len(got) or set(got) != wanted:
+    if len(got) != len(wanted) or len(set(got)) != len(got) or set(got) != wanted:
         raise CandidateKShadowError(f"K output does not cover the cycle targets exactly ({len(set(got) & wanted)}/{len(wanted)})")
     values = out[["k_prediction", "k_seasonal_prediction", "k_seasonal_weight"]].astype(float)
     if not np.isfinite(values.to_numpy()).all() or (out["k_prediction"] < 0).any():

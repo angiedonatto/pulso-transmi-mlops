@@ -229,7 +229,7 @@ def test_second_run_is_idempotent(artifact: str) -> None:
     assert len(fake.writes()) == writes_before and predictor.calls == []
 
 
-@pytest.mark.parametrize("registered,active,status", [(False, False, "not_registered"), (True, True, "refused")])
+@pytest.mark.parametrize("registered,active,status", [(False, False, "not_registered"), (True, True, "champion_active")])
 def test_refuses_without_a_shadow_registration(artifact: str, registered: bool, active: bool, status: str) -> None:
     fake = FakeSupabase(k_registered=registered, k_active=active)
     predictor = FakePredictor()
@@ -343,7 +343,8 @@ def test_workflow_is_separate_read_only_and_without_submission_secret() -> None:
     assert "requirements/candidate-k-shadow.txt" in code
     requirements = (ROOT / "requirements" / "candidate-k-shadow.txt").read_text()
     assert "download.pytorch.org/whl/cpu" in requirements and "torch==2.2.2+cpu" in requirements
-    assert "candidate_k" not in (ROOT / ".github" / "workflows" / "predict.yml").read_text()
+    predict = (ROOT / ".github" / "workflows" / "predict.yml").read_text()
+    assert "shadow_candidate_k" not in predict and "run_candidate_k_shadow" not in predict  # Predict never runs the shadow job
 
 
 # --------------------------------------------------------------------------------------

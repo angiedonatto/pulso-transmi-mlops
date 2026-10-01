@@ -1,0 +1,40 @@
+name: ci-candidate-k
+
+# The whole test suite in the environment Predict uses while Candidate K is the champion: project
+# dependencies plus the CPU-only PyTorch runtime (numpy 1.x), including the PyTorch tests that the
+# `ci` workflow skips. Runs only when the official prediction path or its dependencies change.
+on:
+  push:
+    paths:
+      - "src/candidate_k_*.py"
+      - "src/candidate_j_*.py"
+      - "src/candidate_g_adaptive.py"
+      - "src/cycle_predictions.py"
+      - "src/official_submission.py"
+      - "tests/test_candidate_k_*.py"
+      - "requirements/candidate-k-shadow.txt"
+      - "artifacts/shadow/candidate_k_v2_1/**"
+      - ".github/workflows/predict.yml"
+      - ".github/workflows/ci_candidate_k.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements/candidate-k-shadow.txt
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pip install -r requirements/candidate-k-shadow.txt
+      - run: python -c "import torch, numpy; print('torch', torch.__version__, 'numpy', numpy.__version__)"
+      - run: PYTHONPATH=. pytest -q
