@@ -74,11 +74,15 @@ class FakeStore:
         self.receipts: list[dict] = []
         self._official_receipt_exists = official_receipt_exists
         self.official_receipt_checks: list[str] = []
+        self.prediction_model_ids: list[str] = []
+        self.active_loads = 0
 
     def load_active_champion(self):
+        self.active_loads += 1
         return model()
 
     def predictions_for_cycle(self, cycle_id, model_id):
+        self.prediction_model_ids.append(model_id)
         return predictions()
 
     def official_receipt_exists(self, cycle_id):
@@ -102,7 +106,7 @@ class FakePredictionStore:
         self.persisted_predictions: list | None = None
 
     def load_active_champion(self):
-        return {"model_id": model()["model_id"], "run_id": model()["run_id"], "artifact_uri": self.artifact_uri, "is_active": True}
+        return {**model(), "artifact_uri": self.artifact_uri}
 
     def observations_until(self, data_cutoff):
         return pd.DataFrame(
@@ -118,6 +122,22 @@ class FakePredictionStore:
     def persist_predictions(self, cycle, model, predictions) -> int:
         self.persisted_predictions = predictions
         return len(predictions)
+
+
+class ChampionRaceSubmissionStore(FakeStore):
+    def load_active_champion(self):
+        self.active_loads += 1
+        return {
+            **model(),
+            "model_id": "99999999-9999-4999-8999-999999999999",
+            "run_id": "99999999-9999-4999-8999-999999999998",
+        }
+
+    def predictions_for_cycle(self, cycle_id, model_id):
+        self.prediction_model_ids.append(model_id)
+        if model_id != model()["model_id"]:
+            return []
+        return predictions()
 
 
 class UntouchedPredictionStore:
@@ -254,3 +274,19 @@ def test_run_official_cycle_generates_and_submits(tmp_path: Path) -> None:
     assert len(prediction_store.persisted_predictions) == 2
     assert submission_store.official_receipt_checks == ["cyc_test_1"]
     assert submission_store.receipts[0]["status"] == "accepted"
+
+
+def test_run_official_cycle_submits_with_the_generated_model_when_champion_changes(tmp_path: Path) -> None:
+    api = FakeApi(
+        [httpx.Response(201, json={"submission_id": "sub_1", "accepted_at": "2026-01-02T00:05:00Z", "is_official": True})],
+        cycle(),
+    )
+    prediction_store = FakePredictionStore(tmp_path)
+    submission_store = ChampionRaceSubmissionStore(official_receipt_exists=False)
+
+    result = run_official_cycle(api, prediction_store, submission_store)
+
+    assert result.status == "accepted"
+    assert submission_store.active_loads == 0
+    assert submission_store.prediction_model_ids == [model()["model_id"]]
+    assert submission_store.receipts[0]["model_id"] == model()["model_id"]

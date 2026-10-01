@@ -167,14 +167,20 @@ def run_official_cycle(
         return SubmissionResult(status="no_open_cycle")
     if submission_store.official_receipt_exists(cycle.cycle_id):
         return SubmissionResult(status="already_official", cycle_id=cycle.cycle_id)
-    generate_predictions_for_cycle(cycle, prediction_store)
-    return submit_for_cycle(cycle, api, submission_store, max_attempts=max_attempts)
+    model = prediction_store.load_active_champion()
+    generate_predictions_for_cycle(cycle, prediction_store, model=model)
+    return submit_for_cycle(cycle, api, submission_store, max_attempts=max_attempts, model=model)
 
 
 def submit_for_cycle(
-    cycle: ForecastCycle, api: SubmissionApi, store: SubmissionStore, *, max_attempts: int = 3
+    cycle: ForecastCycle,
+    api: SubmissionApi,
+    store: SubmissionStore,
+    *,
+    max_attempts: int = 3,
+    model: dict[str, Any] | None = None,
 ) -> SubmissionResult:
-    model = store.load_active_champion()
+    model = model or store.load_active_champion()
     predictions = store.predictions_for_cycle(cycle.cycle_id, model["model_id"])
     payload = build_submission_payload(cycle, model, predictions)
     payload_hash = stable_payload_hash(payload)
