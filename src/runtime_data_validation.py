@@ -71,6 +71,9 @@ class RuntimeValidationContext:
     cursor: str | None = None
     empty_response_count: int = 0
     empty_response_critical_threshold: int = 3
+    # The stream is the source of truth: a re-published value for an existing key is a revision and is
+    # written (with an audit event holding the previous value). False restores the old quarantine policy.
+    accept_revisions: bool = True
 
 
 @dataclass(frozen=True)
@@ -228,7 +231,19 @@ class RuntimeDataValidator:
         else:
             checks.append(_check("runtime.schema.extra_fields", "passed", "pass", 0, 0, {}, batch_hash, context.cursor))
 
-        valid_rows, rows_to_write, existing_identical_count = _deduplicate_and_check_existing(normalized_candidates, context, events, batch_hash)
+        valid_rows, rows_to_write, existing_identical_count, revised_count = _deduplicate_and_check_existing(normalized_candidates, context, events, batch_hash)
+        checks.append(
+            _check(
+                "runtime.revisions",
+                "warning" if revised_count else "passed",
+                "warning" if revised_count else "pass",
+                revised_count,
+                0,
+                {"message": "existing observations overwritten by re-published stream values"} if revised_count else {},
+                batch_hash,
+                context.cursor,
+            )
+        )
         if existing_identical_count:
             checks.append(
                 _check(
@@ -380,7 +395,7 @@ def _deduplicate_and_check_existing(
     context: RuntimeValidationContext,
     events: list[RuntimeIngestionEvent],
     batch_hash: str,
-) -> tuple[list[ObservationRow], list[ObservationRow], int]:
+) -> tuple[list[ObservationRow], list[ObservationRow], int, int]:
     by_key: dict[tuple[str, str], list[tuple[int, ObservationRow, dict[str, Any], dict[str, Any]]]] = {}
     for item in candidates:
         _, row, _, _ = item
@@ -388,14 +403,23 @@ def _deduplicate_and_check_existing(
     valid: list[ObservationRow] = []
     rows_to_write: list[ObservationRow] = []
     existing_identical_count = 0
+    revised_count = 0
     for key, items in by_key.items():
         demands = {item[1].demand for item in items}
         if len(demands) > 1:
+            latest = _latest_release(items) if context.accept_revisions else None
+            if latest is None:  # no unambiguous newest publication: keep nothing
+                for index, row, normalized, raw in items:
+                    events.append(
+                        _event("row", "quarantine", ("duplicate_conflicting_batch",), raw, normalized, {"row_index": index, "demands": sorted(demands)}, batch_hash, context.cursor, _hash_payload(raw), row.station_id, row.observed_at)
+                    )
+                continue
             for index, row, normalized, raw in items:
-                events.append(
-                    _event("row", "quarantine", ("duplicate_conflicting_batch",), raw, normalized, {"row_index": index, "demands": sorted(demands)}, batch_hash, context.cursor, _hash_payload(raw), row.station_id, row.observed_at)
-                )
-            continue
+                if index != latest[0]:
+                    events.append(
+                        _event("row", "warning", ("duplicate_conflicting_batch_resolved",), raw, normalized, {"row_index": index, "kept_row_index": latest[0], "kept_released_at": latest[3].get("released_at")}, batch_hash, context.cursor, _hash_payload(raw), row.station_id, row.observed_at)
+                    )
+            items = [latest]
         first_index, first_row, first_normalized, first_raw = items[0]
         if len(items) > 1:
             for index, row, normalized, raw in items[1:]:
@@ -404,9 +428,17 @@ def _deduplicate_and_check_existing(
                 )
         existing = context.existing_observations.get(key)
         if existing is not None and existing != first_row.demand:
+            if not context.accept_revisions:
+                events.append(
+                    _event("row", "quarantine", ("duplicate_conflicting_existing",), first_raw, first_normalized, {"existing_demand": existing, "incoming_demand": first_row.demand}, batch_hash, context.cursor, _hash_payload(first_raw), first_row.station_id, first_row.observed_at)
+                )
+                continue
             events.append(
-                _event("row", "quarantine", ("duplicate_conflicting_existing",), first_raw, first_normalized, {"existing_demand": existing, "incoming_demand": first_row.demand}, batch_hash, context.cursor, _hash_payload(first_raw), first_row.station_id, first_row.observed_at)
+                _event("row", "warning", ("value_revised",), first_raw, first_normalized, {"previous_demand": existing, "revised_demand": first_row.demand, "released_at": first_raw.get("released_at")}, batch_hash, context.cursor, _hash_payload(first_raw), first_row.station_id, first_row.observed_at)
             )
+            revised_count += 1
+            valid.append(first_row)
+            rows_to_write.append(first_row)
             continue
         if existing == first_row.demand:
             existing_identical_count += len(items)
@@ -414,7 +446,24 @@ def _deduplicate_and_check_existing(
             continue
         valid.append(first_row)
         rows_to_write.append(first_row)
-    return valid, rows_to_write, existing_identical_count
+    return valid, rows_to_write, existing_identical_count, revised_count
+
+
+def _latest_release(items: list[tuple[int, ObservationRow, dict[str, Any], dict[str, Any]]]) -> tuple[int, ObservationRow, dict[str, Any], dict[str, Any]] | None:
+    """The single most recently published version of a key, or None when it is ambiguous."""
+    stamped = []
+    for item in items:
+        value = item[3].get("released_at")
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00")) if value is not None else None
+        except ValueError:
+            parsed = None
+        if parsed is None or parsed.tzinfo is None:
+            return None
+        stamped.append((parsed, item))
+    newest = max(stamp for stamp, _ in stamped)
+    winners = [item for stamp, item in stamped if stamp == newest]
+    return winners[0] if len(winners) == 1 else None
 
 
 def _add_order_gap_coverage_checks(

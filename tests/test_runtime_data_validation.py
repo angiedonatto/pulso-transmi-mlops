@@ -119,14 +119,59 @@ def test_duplicate_identical_and_conflicting_within_batch() -> None:
     assert "duplicate_conflicting_batch" in event_reasons(result)
 
 
-def test_duplicate_conflicting_against_existing_observation_is_quarantined() -> None:
+def test_duplicate_conflicting_against_existing_observation_is_quarantined_when_revisions_disabled() -> None:
     result = validate(
         [{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10}],
         existing_observations={("03000", "2026-01-01T05:00:00Z"): 11},
+        accept_revisions=False,
     )
 
     assert result.valid_rows == []
     assert "duplicate_conflicting_existing" in event_reasons(result)
+
+
+def test_republished_value_for_existing_observation_is_written_as_revision() -> None:
+    result = validate(
+        [{"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10, "released_at": "2026-01-02T00:00:00Z"}],
+        existing_observations={("03000", "2026-01-01T05:00:00Z"): 11},
+    )
+
+    assert result.rows_to_write == [ObservationRow("03000", "2026-01-01T05:00:00Z", 10)]
+    revision = next(event for event in result.events if "value_revised" in event.reason_codes)
+    assert revision.severity == "warning"
+    assert revision.details["previous_demand"] == 11 and revision.details["revised_demand"] == 10
+    assert checks_by_name(result)["runtime.revisions"].actual_value == 1
+    assert result.data_health == "DEGRADED" and result.prediction_readiness == "READY"
+
+
+def test_conflicting_versions_in_one_batch_keep_the_latest_publication() -> None:
+    result = validate(
+        [
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10, "released_at": "2026-01-02T00:00:00Z"},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 14, "released_at": "2026-01-02T00:30:00Z"},
+        ]
+    )
+
+    assert result.rows_to_write == [ObservationRow("03000", "2026-01-01T05:00:00Z", 14)]
+    assert "duplicate_conflicting_batch_resolved" in event_reasons(result)
+    tied = validate(
+        [
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 10, "released_at": "2026-01-02T00:00:00Z"},
+            {"station_id": "03000", "observed_at": "2026-01-01T05:00:00Z", "demand": 14, "released_at": "2026-01-02T00:00:00Z"},
+        ]
+    )
+    assert tied.valid_rows == []  # same publication time: ambiguous, quarantined
+    assert "duplicate_conflicting_batch" in event_reasons(tied)
+
+
+def test_abrupt_change_is_written_and_only_warned() -> None:
+    start = datetime(2026, 1, 5, 5, 0, tzinfo=timezone.utc)
+    history = [ObservationRow("03000", (start - timedelta(days=d)).isoformat().replace("+00:00", "Z"), 100 + d % 3) for d in range(1, 15)]
+    result = validate([{"station_id": "03000", "observed_at": start.isoformat().replace("+00:00", "Z"), "demand": 1500}], history_rows=history)
+
+    assert result.rows_to_write == [ObservationRow("03000", "2026-01-05T05:00:00Z", 1500)]
+    assert "demand_outlier" in event_reasons(result)
+    assert all(event.severity != "quarantine" for event in result.events)
 
 
 def test_identical_existing_duplicate_is_idempotent_and_not_written_or_warned() -> None:

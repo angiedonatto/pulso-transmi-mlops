@@ -16,6 +16,16 @@ from stream_sync import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _no_sleep_and_no_default_reconcile(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Retries must not slow the suite; legacy cursor tests run without the reconciliation pass
+    (the reconciliation tests enable it explicitly)."""
+    import stream_sync
+
+    monkeypatch.setattr(stream_sync, "_sleep", lambda seconds: None)
+    monkeypatch.setenv("PULSO_STREAM_RECONCILE_LOOKBACK_HOURS", "0")
+
+
 class FakeApi:
     def __init__(self, pages: dict[str | None, StreamPage]) -> None:
         self.pages = pages
@@ -458,3 +468,258 @@ def test_new_station_quarantine_replay_passes_after_catalog_update() -> None:
 
     assert result.resolved == 1
     assert store.rows[("99999", "2026-09-09T05:00:00Z")].demand == 17
+
+
+# ---------------------------------------------------------------------------------------
+# Robustness: late arrivals, revisions, retries, repeated pages, order, abrupt changes,
+# reconciliation, gaps and freshness
+# ---------------------------------------------------------------------------------------
+
+from stream_sync import (  # noqa: E402
+    RetryPolicy,
+    SupabaseRestObservationStore,
+    freshness_for_cutoff,
+    reconcile_recent_observations,
+    recent_completeness,
+)
+
+STATIONS = {"03000", "02300"}
+
+
+def slot(index: int) -> str:
+    return (datetime(2026, 9, 18, 0, 0, tzinfo=timezone.utc) + timedelta(minutes=15 * index)).isoformat().replace("+00:00", "Z")
+
+
+def stream_row(station: str, index: int, demand: int, released: str = "2026-09-30T00:00:00Z") -> dict:
+    return {"station_id": station, "observed_at": slot(index), "demand": demand, "released_at": released}
+
+
+class HistoryStore(MemoryStore):
+    """MemoryStore that also exposes what the Supabase store offers for gaps and freshness."""
+
+    def __init__(self, **kwargs) -> None:
+        kwargs.setdefault("known_station_ids", set(STATIONS))
+        super().__init__(**kwargs)
+
+    def recent_observation_history(self, limit: int = 10000) -> list[ObservationRow]:
+        return sorted(self.rows.values(), key=lambda row: row.observed_at, reverse=True)[:limit]
+
+
+class SequenceApi:
+    """Returns (or raises) the queued responses of a cursor in order; the last one repeats."""
+
+    def __init__(self, responses: dict[str | None, list]) -> None:
+        self.responses = responses
+        self.calls: list[str | None] = []
+
+    def observations_page(self, *, cursor: str | None, limit: int) -> StreamPage:
+        self.calls.append(cursor)
+        queue = self.responses[cursor]
+        item = queue.pop(0) if len(queue) > 1 else queue[0]
+        if isinstance(item, BaseException):
+            raise item
+        return item
+
+
+def http_error(status: int) -> httpx.HTTPStatusError:
+    request = httpx.Request("GET", "https://example.test/v1/stream/observations")
+    return httpx.HTTPStatusError("error", request=request, response=httpx.Response(status, request=request))
+
+
+def test_late_arrival_is_written_and_last_observed_never_moves_back() -> None:
+    api = FakeApi({"c1": StreamPage([stream_row("03000", 2, 50)], "c2"), "c2": StreamPage([], None)})
+    store = HistoryStore(cursor="c1")
+    store.last_observed_at = slot(10)
+
+    result = sync_observation_stream(api, store)
+
+    assert store.rows[("03000", slot(2))].demand == 50
+    assert result.last_observed_at == slot(10)
+    ordering = {c.check_name: c for c in store.validation_results[0].checks}["runtime.timestamp.ordering"]
+    assert ordering.details["late_arrivals"] == 1
+
+
+def test_republished_value_overwrites_stored_value_with_audit_event() -> None:
+    api = FakeApi({"c1": StreamPage([stream_row("03000", 4, 777, released="2026-10-01T00:00:00Z")], None)})
+    store = HistoryStore(cursor="c1")
+    store.rows[("03000", slot(4))] = ObservationRow("03000", slot(4), 120)
+
+    sync_observation_stream(api, store)
+
+    assert store.rows[("03000", slot(4))].demand == 777
+    revision = next(e for r in store.validation_results for e in r.events if "value_revised" in e.reason_codes)
+    assert revision.details["previous_demand"] == 120
+
+
+def test_transient_timeout_is_retried_and_does_not_persist_an_api_error() -> None:
+    request = httpx.Request("GET", "https://example.test/v1/stream/observations")
+    api = SequenceApi({None: [httpx.ReadTimeout("t", request=request), http_error(502), StreamPage([stream_row("03000", 0, 9)], None)]})
+    store = HistoryStore()
+
+    result = sync_observation_stream(api, store, retry=RetryPolicy(attempts=3, base_delay_s=0))
+
+    assert result.retries == 2 and result.written == 1
+    assert all(e.event_type != "api_error" for r in store.validation_results for e in r.events)
+
+
+def test_persistent_5xx_exhausts_retries_then_records_error_without_confirming() -> None:
+    api = SequenceApi({None: [http_error(503)]})
+    store = HistoryStore()
+
+    with pytest.raises(httpx.HTTPStatusError):
+        sync_observation_stream(api, store, retry=RetryPolicy(attempts=3, base_delay_s=0))
+
+    assert api.calls == [None, None, None]
+    assert store.confirmed == []
+    assert store.validation_results[-1].events[0].reason_codes == ("http_5xx",)
+
+
+def test_client_errors_are_not_retried() -> None:
+    api = SequenceApi({None: [http_error(401)]})
+    store = HistoryStore()
+
+    with pytest.raises(httpx.HTTPStatusError):
+        sync_observation_stream(api, store, retry=RetryPolicy(attempts=3, base_delay_s=0))
+
+    assert api.calls == [None]
+
+
+def test_page_that_returns_its_own_cursor_does_not_loop() -> None:
+    api = FakeApi({"c1": StreamPage([stream_row("03000", 1, 10)], "c1")})
+    store = HistoryStore(cursor="c1")
+
+    result = sync_observation_stream(api, store)
+
+    assert result.cursor_stalled is True
+    assert api.calls == ["c1"]
+    assert store.rows[("03000", slot(1))].demand == 10
+
+
+def test_cursor_cycle_is_detected() -> None:
+    api = FakeApi({None: StreamPage([stream_row("03000", 1, 10)], "a"), "a": StreamPage([stream_row("03000", 2, 11)], "b"), "b": StreamPage([stream_row("03000", 3, 12)], "a")})
+    store = HistoryStore()
+
+    result = sync_observation_stream(api, store)
+
+    assert result.cursor_stalled is True
+    assert api.calls == [None, "a", "b"]
+    assert len(store.rows) == 3
+
+
+def test_repeated_page_is_idempotent() -> None:
+    page = [stream_row("03000", 1, 10), stream_row("02300", 1, 20)]
+    api = FakeApi({None: StreamPage(page, "a"), "a": StreamPage(page, None)})  # server re-sends the same rows
+    store = HistoryStore()
+
+    result = sync_observation_stream(api, store)
+
+    assert result.received == 4
+    assert result.written == 2
+    assert store.rows_written == 2
+
+
+def test_out_of_order_rows_are_all_written() -> None:
+    rows = [stream_row("03000", 3, 13), stream_row("03000", 1, 11), stream_row("03000", 2, 12)]
+    api = FakeApi({None: StreamPage(rows, None)})
+    store = HistoryStore()
+
+    sync_observation_stream(api, store)
+
+    assert [store.rows[("03000", slot(i))].demand for i in (1, 2, 3)] == [11, 12, 13]
+    ordering = {c.check_name: c for c in store.validation_results[0].checks}["runtime.timestamp.ordering"]
+    assert ordering.details["out_of_order"] >= 1
+
+
+def test_abrupt_change_is_stored_not_discarded() -> None:
+    store = HistoryStore(cursor="c1")
+    for day in range(1, 15):
+        when = datetime(2026, 9, 18, 4, 0, tzinfo=timezone.utc) - timedelta(days=day)
+        store.rows[("03000", when.isoformat().replace("+00:00", "Z"))] = ObservationRow("03000", when.isoformat().replace("+00:00", "Z"), 100 + day % 3)
+    api = FakeApi({"c1": StreamPage([stream_row("03000", 16, 2900)], None)})  # 04:00Z, ~29x the usual level
+
+    sync_observation_stream(api, store)
+
+    assert store.rows[("03000", slot(16))].demand == 2900
+    assert all(e.severity != "quarantine" for r in store.validation_results for e in r.events)
+
+
+def test_reconciliation_fills_missing_rows_and_applies_revisions_without_moving_the_cursor() -> None:
+    full = [stream_row(s, i, 100 + i) for i in range(8) for s in sorted(STATIONS)]
+    full[-1] = {**full[-1], "demand": 999}
+    api = FakeApi({None: StreamPage(full[:8], "p2"), "p2": StreamPage(full[8:], None)})
+    store = HistoryStore(cursor="confirmed")
+    for row in full:
+        if row["observed_at"] != slot(5):  # slot 5 never arrived
+            store.rows[(row["station_id"], row["observed_at"])] = ObservationRow(row["station_id"], row["observed_at"], 100 + int(row["observed_at"][14:16]) // 15 + 4 * int(row["observed_at"][11:13]))
+    stored_last = store.rows[(full[-1]["station_id"], full[-1]["observed_at"])].demand
+
+    result = reconcile_recent_observations(api, store, lookback_hours=6, retry=RetryPolicy(base_delay_s=0))
+
+    assert result.error is None
+    assert result.missing_filled == 2 and result.revised == 1
+    assert store.rows[(full[-1]["station_id"], full[-1]["observed_at"])].demand == 999 != stored_last
+    assert store.cursor == "confirmed" and store.confirmed == []
+
+
+def test_reconciliation_only_touches_the_lookback_window() -> None:
+    rows = [stream_row("03000", i, 10) for i in range(0, 40)]
+    api = FakeApi({None: StreamPage(rows, None)})
+    store = HistoryStore()
+
+    result = reconcile_recent_observations(api, store, lookback_hours=2, retry=RetryPolicy(base_delay_s=0))
+
+    assert result.in_window == 8  # 2h = 8 slots ending at the newest slot
+    assert len(store.rows) == 8
+
+
+def test_reconciliation_failure_never_breaks_the_sync() -> None:
+    api = SequenceApi({"c1": [StreamPage([stream_row("03000", 1, 10)], None)], None: [http_error(503)]})
+    store = HistoryStore(cursor="c1")
+
+    result = sync_observation_stream(api, store, reconcile_lookback_hours=6, retry=RetryPolicy(attempts=2, base_delay_s=0))
+
+    assert result.written == 1 and store.cursor == "c1"
+    assert result.reconcile is not None and "HTTPStatusError" in result.reconcile.error
+    assert all(e.event_type != "api_error" for r in store.validation_results for e in r.events)
+
+
+def test_completeness_detects_gaps_across_pages() -> None:
+    rows = [ObservationRow(s, slot(i), 1) for i in range(8) for s in STATIONS if not (s == "02300" and i == 5)]
+    report = recent_completeness(rows, STATIONS, lookback_hours=2)
+
+    assert report.missing_slots == (("02300", slot(5)),)
+    assert report.observed_through == slot(4)
+    assert report.expected_slots == 16
+
+
+def test_freshness_for_cutoff_flags_a_missing_last_slot() -> None:
+    rows = [ObservationRow(s, slot(i), 1) for i in range(8) for s in STATIONS]
+    assert freshness_for_cutoff(rows, STATIONS, slot(7), lookback_hours=2)["fresh"] is True
+    stale = freshness_for_cutoff(rows, STATIONS, slot(8), lookback_hours=2)
+    assert stale["fresh"] is False
+    assert stale["observed_through"] == slot(7)
+    assert ["03000", slot(8)] in stale["missing_slots"] and ["02300", slot(8)] in stale["missing_slots"]
+
+
+def test_required_through_fails_when_data_is_stale() -> None:
+    api = FakeApi({None: StreamPage([stream_row(s, i, 5) for i in range(4) for s in STATIONS], None)})
+    store = HistoryStore()
+
+    with pytest.raises(StreamSyncError, match="complete only through"):
+        sync_observation_stream(api, store, reconcile_lookback_hours=0, required_through=slot(5))
+    # the rows were written and the cursor confirmed before the freshness check failed
+    assert len(store.rows) == 8
+    assert store.confirmed == [None] and store.is_exhausted is True
+
+
+def test_confirm_cursor_refreshes_confirmed_at() -> None:
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = request.content
+        return httpx.Response(201, json=[])
+
+    with SupabaseRestObservationStore("https://example.test", "key", transport=httpx.MockTransport(handler)) as store:
+        store.confirm_cursor(stream_name="observations", cursor="c", rows_written=1, last_observed_at=slot(0), is_exhausted=True)
+
+    assert b"confirmed_at" in captured["body"]
