@@ -1,0 +1,418 @@
+{
+  "available_data": [
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 46.22234038948277,
+      "mae": 307.0104166666667,
+      "mean_station_accuracy": 48.14267117784519,
+      "model": "baseline_latest",
+      "raw_wape": 0.5377765961051724,
+      "rows": 672,
+      "signed_bias": 5.7961309523809526
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 42.5342257725566,
+      "mae": 328.0654349299658,
+      "mean_station_accuracy": 43.424878552393466,
+      "model": "candidate_j_v1_1",
+      "raw_wape": 0.574657742274434,
+      "rows": 672,
+      "signed_bias": -35.41656114207014
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 41.12768320468957,
+      "mae": 336.0952231905135,
+      "mean_station_accuracy": 37.968377523069115,
+      "model": "candidate_f",
+      "raw_wape": 0.5887231679531043,
+      "rows": 672,
+      "signed_bias": -110.74034689879532
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 27.05043573340835,
+      "mae": 416.4605950378336,
+      "mean_station_accuracy": 21.631846447187176,
+      "model": "candidate_b_v1",
+      "raw_wape": 0.7294956426659165,
+      "rows": 672,
+      "signed_bias": -221.96304200845995
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 22.23143014127249,
+      "mae": 443.97173861447385,
+      "mean_station_accuracy": 21.039520515264275,
+      "model": "candidate_g",
+      "raw_wape": 0.7776856985872751,
+      "rows": 672,
+      "signed_bias": 164.1995187168794
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 26.739456429579732,
+      "mae": 418.2359397875792,
+      "mean_station_accuracy": 20.97380487872863,
+      "model": "candidate_b_v2",
+      "raw_wape": 0.7326054357042027,
+      "rows": 672,
+      "signed_bias": -220.59541234602207
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 24.450978398851,
+      "mae": 431.30059523809524,
+      "mean_station_accuracy": 19.977147787193818,
+      "model": "baseline_lag96",
+      "raw_wape": 0.75549021601149,
+      "rows": 672,
+      "signed_bias": -131.3095238095238
+    }
+  ],
+  "common_cycle_count": 14,
+  "common_cycles_summary": [
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 46.22234038948277,
+      "mae": 307.0104166666667,
+      "mean_station_accuracy": 48.14267117784519,
+      "model": "baseline_latest",
+      "raw_wape": 0.5377765961051724,
+      "rows": 672,
+      "signed_bias": 5.7961309523809526
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 42.5342257725566,
+      "mae": 328.0654349299658,
+      "mean_station_accuracy": 43.424878552393466,
+      "model": "candidate_j_v1_1",
+      "raw_wape": 0.574657742274434,
+      "rows": 672,
+      "signed_bias": -35.41656114207014
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 41.12768320468957,
+      "mae": 336.0952231905135,
+      "mean_station_accuracy": 37.968377523069115,
+      "model": "candidate_f",
+      "raw_wape": 0.5887231679531043,
+      "rows": 672,
+      "signed_bias": -110.74034689879532
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 27.05043573340835,
+      "mae": 416.4605950378336,
+      "mean_station_accuracy": 21.631846447187176,
+      "model": "candidate_b_v1",
+      "raw_wape": 0.7294956426659165,
+      "rows": 672,
+      "signed_bias": -221.96304200845995
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 22.23143014127249,
+      "mae": 443.97173861447385,
+      "mean_station_accuracy": 21.039520515264275,
+      "model": "candidate_g",
+      "raw_wape": 0.7776856985872751,
+      "rows": 672,
+      "signed_bias": 164.1995187168794
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 26.739456429579732,
+      "mae": 418.2359397875792,
+      "mean_station_accuracy": 20.97380487872863,
+      "model": "candidate_b_v2",
+      "raw_wape": 0.7326054357042027,
+      "rows": 672,
+      "signed_bias": -220.59541234602207
+    },
+    {
+      "cycles": 14,
+      "global_wape_accuracy": 24.450978398851,
+      "mae": 431.30059523809524,
+      "mean_station_accuracy": 19.977147787193818,
+      "model": "baseline_lag96",
+      "raw_wape": 0.75549021601149,
+      "rows": 672,
+      "signed_bias": -131.3095238095238
+    }
+  ],
+  "cycles_requested": 14,
+  "generated_at_utc": "2026-10-01T12:56:41.661553+00:00",
+  "historical_data_cutoff_max": "2026-09-18T19:00:00Z",
+  "historical_data_cutoff_min": "2026-09-18T06:00:00Z",
+  "historical_target_at_max": "2026-09-18T20:00:00Z",
+  "inventory": [
+    {
+      "artifact": "",
+      "implementation": "scripts/model_zoo_recent_replay.py",
+      "model": "baseline_lag96",
+      "notes": "Uses target_at - 24h, causal for all horizons.",
+      "production_or_experimental": "baseline",
+      "reason_if_not_replayable": "",
+      "replayable": true,
+      "version": "daily persistence"
+    },
+    {
+      "artifact": "",
+      "implementation": "scripts/model_zoo_recent_replay.py",
+      "model": "baseline_latest",
+      "notes": "Repeats latest station observation at data_cutoff.",
+      "production_or_experimental": "baseline",
+      "reason_if_not_replayable": "",
+      "replayable": true,
+      "version": "latest observation"
+    },
+    {
+      "artifact": "artifacts/shadow/candidate_b_v1/model.pkl",
+      "implementation": "src/candidate_b_shadow.py",
+      "model": "candidate_b_v1",
+      "notes": "Frozen HGB artifact.",
+      "production_or_experimental": "shadow",
+      "reason_if_not_replayable": "",
+      "replayable": true,
+      "version": "candidate_b_v1"
+    },
+    {
+      "artifact": "artifacts/shadow/candidate_b_v2/model.pkl",
+      "implementation": "src/candidate_b_shadow.py",
+      "model": "candidate_b_v2",
+      "notes": "Frozen HGB artifact with later training cutoff.",
+      "production_or_experimental": "artifact-only",
+      "reason_if_not_replayable": "",
+      "replayable": true,
+      "version": "candidate_b_v2"
+    },
+    {
+      "artifact": "reports/candidate_c/",
+      "implementation": "scripts/candidate_c_experiments.py",
+      "model": "candidate_c",
+      "notes": "",
+      "production_or_experimental": "experimental/lab",
+      "reason_if_not_replayable": "Experiment reports exist, but no frozen production artifact for this live window.",
+      "replayable": false,
+      "version": "candidate_c experiments"
+    },
+    {
+      "artifact": "reports/candidate_d1/",
+      "implementation": "scripts/candidate_d1_residual_calibration.py",
+      "model": "candidate_d1",
+      "notes": "",
+      "production_or_experimental": "experimental/lab",
+      "reason_if_not_replayable": "Report artifacts only; dispatch/runtime wrapper is not available in this worktree.",
+      "replayable": false,
+      "version": "residual calibration"
+    },
+    {
+      "artifact": "",
+      "implementation": "",
+      "model": "candidate_d2",
+      "notes": "",
+      "production_or_experimental": "experimental/lab",
+      "reason_if_not_replayable": "No replayable model implementation in this worktree.",
+      "replayable": false,
+      "version": "context audit"
+    },
+    {
+      "artifact": "",
+      "implementation": "",
+      "model": "candidate_e",
+      "notes": "",
+      "production_or_experimental": "experimental/lab",
+      "reason_if_not_replayable": "No script/artifact present on origin/student-work worktree.",
+      "replayable": false,
+      "version": "recency lab"
+    },
+    {
+      "artifact": "implicit inside Candidate G",
+      "implementation": "src/candidate_g_adaptive.py::build_candidate_f_base_frame; production G traces",
+      "model": "candidate_f",
+      "notes": "Scored from G trace base_prediction.",
+      "production_or_experimental": "production component",
+      "reason_if_not_replayable": "",
+      "replayable": true,
+      "version": "profile-ratio HGB base"
+    },
+    {
+      "artifact": "artifacts/shadow/candidate_g_v1/metadata.json",
+      "implementation": "src/candidate_g_adaptive.py",
+      "model": "candidate_g",
+      "notes": "Scored from persisted prediction_traces final_prediction.",
+      "production_or_experimental": "registered/production-or-shadow",
+      "reason_if_not_replayable": "",
+      "replayable": true,
+      "version": "candidate_g_v1"
+    },
+    {
+      "artifact": "",
+      "implementation": "",
+      "model": "candidate_h",
+      "notes": "",
+      "production_or_experimental": "experimental/lab",
+      "reason_if_not_replayable": "No script/artifact present on origin/student-work worktree.",
+      "replayable": false,
+      "version": "guard lab"
+    },
+    {
+      "artifact": "artifacts/shadow/candidate_i_v1/metadata.json",
+      "implementation": "src/candidate_i_snr_gate.py",
+      "model": "candidate_i_v1",
+      "notes": "Causal OOS F history rebuilt per cycle; skipped by default in retrospective replay because it refits HGB history for every cycle.",
+      "production_or_experimental": "shadow",
+      "reason_if_not_replayable": "",
+      "replayable": true,
+      "version": "candidate_i_v1"
+    },
+    {
+      "artifact": "artifacts/shadow/candidate_j_v1_1/metadata.json",
+      "implementation": "src/candidate_j_shadow.py",
+      "model": "candidate_j_v1_1",
+      "notes": "No tuning; wraps Candidate G trace causally.",
+      "production_or_experimental": "shadow/official-capable",
+      "reason_if_not_replayable": "",
+      "replayable": true,
+      "version": "candidate_j_v1_1"
+    }
+  ],
+  "models_scored": [
+    "baseline_lag96",
+    "baseline_latest",
+    "candidate_b_v1",
+    "candidate_b_v2",
+    "candidate_f",
+    "candidate_g",
+    "candidate_j_v1_1"
+  ],
+  "notes": [
+    "Selection window is real operational arrival time; data_cutoff/target_at are historical replay timestamps.",
+    "Candidate G and Candidate F use persisted G traces: base_prediction is the production F base, final_prediction is production G.",
+    "No model is tuned or retrained using target actuals in this window."
+  ],
+  "real_window_end": null,
+  "real_window_start": "2026-09-30T05:00:00+00:00",
+  "replay_failures": [
+    {
+      "cycle_id": null,
+      "model": "candidate_i_v1",
+      "reason": "skipped by default: causal replay rebuilds OOS Candidate F HGB history per cycle; use --include-candidate-i for a slow full replay."
+    }
+  ],
+  "runtime_seconds": 113.224,
+  "wins_vs_g_and_j": [
+    {
+      "cycles": 14,
+      "losses": 9,
+      "mean_delta_pp": -0.9233214301434628,
+      "model": "baseline_lag96",
+      "reference": "candidate_g",
+      "ties": 0,
+      "wins": 5
+    },
+    {
+      "cycles": 14,
+      "losses": 3,
+      "mean_delta_pp": 4.701006845956803,
+      "model": "baseline_latest",
+      "reference": "candidate_g",
+      "ties": 0,
+      "wins": 11
+    },
+    {
+      "cycles": 14,
+      "losses": 8,
+      "mean_delta_pp": -0.05118359248031977,
+      "model": "candidate_b_v1",
+      "reference": "candidate_g",
+      "ties": 0,
+      "wins": 6
+    },
+    {
+      "cycles": 14,
+      "losses": 8,
+      "mean_delta_pp": -0.23956840410492017,
+      "model": "candidate_b_v2",
+      "reference": "candidate_g",
+      "ties": 0,
+      "wins": 6
+    },
+    {
+      "cycles": 14,
+      "losses": 8,
+      "mean_delta_pp": 3.4429228624569164,
+      "model": "candidate_f",
+      "reference": "candidate_g",
+      "ties": 0,
+      "wins": 6
+    },
+    {
+      "cycles": 14,
+      "losses": 6,
+      "mean_delta_pp": 3.0381316552815156,
+      "model": "candidate_j_v1_1",
+      "reference": "candidate_g",
+      "ties": 0,
+      "wins": 8
+    },
+    {
+      "cycles": 14,
+      "losses": 10,
+      "mean_delta_pp": -3.9614530854249788,
+      "model": "baseline_lag96",
+      "reference": "candidate_j_v1_1",
+      "ties": 0,
+      "wins": 4
+    },
+    {
+      "cycles": 14,
+      "losses": 1,
+      "mean_delta_pp": 1.6628751906752863,
+      "model": "baseline_latest",
+      "reference": "candidate_j_v1_1",
+      "ties": 10,
+      "wins": 3
+    },
+    {
+      "cycles": 14,
+      "losses": 9,
+      "mean_delta_pp": -3.0893152477618364,
+      "model": "candidate_b_v1",
+      "reference": "candidate_j_v1_1",
+      "ties": 0,
+      "wins": 5
+    },
+    {
+      "cycles": 14,
+      "losses": 9,
+      "mean_delta_pp": -3.277700059386437,
+      "model": "candidate_b_v2",
+      "reference": "candidate_j_v1_1",
+      "ties": 0,
+      "wins": 5
+    },
+    {
+      "cycles": 14,
+      "losses": 6,
+      "mean_delta_pp": 0.40479120717539985,
+      "model": "candidate_f",
+      "reference": "candidate_j_v1_1",
+      "ties": 0,
+      "wins": 8
+    },
+    {
+      "cycles": 14,
+      "losses": 8,
+      "mean_delta_pp": -3.0381316552815156,
+      "model": "candidate_g",
+      "reference": "candidate_j_v1_1",
+      "ties": 0,
+      "wins": 6
+    }
+  ]
+}

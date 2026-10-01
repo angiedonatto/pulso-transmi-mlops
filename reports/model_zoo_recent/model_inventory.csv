@@ -1,0 +1,14 @@
+model,version,implementation,artifact,replayable,reason_if_not_replayable,production_or_experimental,notes
+baseline_lag96,daily persistence,scripts/model_zoo_recent_replay.py,,True,,baseline,"Uses target_at - 24h, causal for all horizons."
+baseline_latest,latest observation,scripts/model_zoo_recent_replay.py,,True,,baseline,Repeats latest station observation at data_cutoff.
+candidate_b_v1,candidate_b_v1,src/candidate_b_shadow.py,artifacts/shadow/candidate_b_v1/model.pkl,True,,shadow,Frozen HGB artifact.
+candidate_b_v2,candidate_b_v2,src/candidate_b_shadow.py,artifacts/shadow/candidate_b_v2/model.pkl,True,,artifact-only,Frozen HGB artifact with later training cutoff.
+candidate_c,candidate_c experiments,scripts/candidate_c_experiments.py,reports/candidate_c/,False,"Experiment reports exist, but no frozen production artifact for this live window.",experimental/lab,
+candidate_d1,residual calibration,scripts/candidate_d1_residual_calibration.py,reports/candidate_d1/,False,Report artifacts only; dispatch/runtime wrapper is not available in this worktree.,experimental/lab,
+candidate_d2,context audit,,,False,No replayable model implementation in this worktree.,experimental/lab,
+candidate_e,recency lab,,,False,No script/artifact present on origin/student-work worktree.,experimental/lab,
+candidate_f,profile-ratio HGB base,src/candidate_g_adaptive.py::build_candidate_f_base_frame; production G traces,implicit inside Candidate G,True,,production component,Scored from G trace base_prediction.
+candidate_g,candidate_g_v1,src/candidate_g_adaptive.py,artifacts/shadow/candidate_g_v1/metadata.json,True,,registered/production-or-shadow,Scored from persisted prediction_traces final_prediction.
+candidate_h,guard lab,,,False,No script/artifact present on origin/student-work worktree.,experimental/lab,
+candidate_i_v1,candidate_i_v1,src/candidate_i_snr_gate.py,artifacts/shadow/candidate_i_v1/metadata.json,True,,shadow,Causal OOS F history rebuilt per cycle; skipped by default in retrospective replay because it refits HGB history for every cycle.
+candidate_j_v1_1,candidate_j_v1_1,src/candidate_j_shadow.py,artifacts/shadow/candidate_j_v1_1/metadata.json,True,,shadow/official-capable,No tuning; wraps Candidate G trace causally.
