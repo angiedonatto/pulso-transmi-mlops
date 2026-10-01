@@ -241,7 +241,7 @@ def test_i_never_submits(flow) -> None:
 def test_workflow_schedules_keep_predict_untouched_and_shadow_hourly() -> None:
     workflows = ROOT / ".github" / "workflows"
     predict = (workflows / "predict.yml").read_text()
-    assert predict.count("cron:") == 1 and 'cron: "2,12,22,32,42,52 * * * *"' in predict
+    assert predict.count("cron:") == 1 and 'cron: "45,50 * * * *"' in predict
     assert "group: predict" in predict
     shadow_yml = (workflows / "shadow_candidate_i.yml").read_text()
     assert shadow_yml.count("cron:") == 1 and 'cron: "27 * * * *"' in shadow_yml
