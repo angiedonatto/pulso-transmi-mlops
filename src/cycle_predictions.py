@@ -528,60 +528,87 @@ def _build_candidate_j_official_predictions(
     g_trace = pd.DataFrame(current_trace_rows)
 
     cutoff = pd.Timestamp(cycle.data_cutoff).tz_convert("UTC")
-    history_start = cutoff - cjs.HISTORY_WINDOW
-    g_history = trace_reader(
-        str(g_model["model_id"]),
-        _ts(history_start),
-        _ts(cutoff),
-    )
-    cycle_targets = pd.DataFrame(
-        [
-            {
-                "station_id": target.station_id,
-                "target_at": target.target_at,
-                "horizon_minutes": target.horizon_minutes,
-                "target_order": target.target_order,
-            }
-            for target in cycle.targets
-        ]
-    )
-    composed = cjs.build_cycle_predictions(
-        cycle_targets=cycle_targets,
-        g_trace=g_trace,
-        g_history=g_history,
-        observations=observations,
-        data_cutoff=cutoff,
-        thresholds=cjs.thresholds_from_artifact(artifact),
-    )
-    by_target = {
-        (str(row.station_id), _ts(row.target_at)): row
-        for row in composed.itertuples(index=False)
-    }
-    predictions: list[CyclePrediction] = []
-    for target in cycle.targets:
-        key = (str(target.station_id), _ts(target.target_at))
-        row = by_target.get(key)
-        if row is None:
-            raise CyclePredictionError(f"Candidate J missing target {key}")
-        predictions.append(
+
+    def fallback_to_g(reason: str) -> tuple[list[CyclePrediction], dict[str, Any], list[CyclePrediction]]:
+        fallback = [
             CyclePrediction(
-                cycle_id=cycle.cycle_id,
+                cycle_id=prediction.cycle_id,
                 model_id=str(model["model_id"]),
-                station_id=str(target.station_id),
-                target_at=_ts(target.target_at),
-                horizon_minutes=int(target.horizon_minutes),
-                prediction=float(row.j_prediction),
+                station_id=prediction.station_id,
+                target_at=prediction.target_at,
+                horizon_minutes=prediction.horizon_minutes,
+                prediction=prediction.prediction,
                 trace={
                     "candidate": cjs.MODEL_VERSION,
-                    "regime": str(row.regime),
-                    "path": str(row.path),
-                    "guard_fired": bool(row.guard_fired),
-                    "g_prediction": float(row.final_prediction),
+                    "regime": "FALLBACK_G",
+                    "path": "g",
+                    "guard_fired": False,
+                    "g_prediction": prediction.prediction,
+                    "fallback_reason": reason,
                     "data_cutoff": _ts(cutoff),
                 },
             )
+            for prediction in g_predictions
+        ]
+        return fallback, g_model, g_predictions
+
+    try:
+        history_start = cutoff - cjs.HISTORY_WINDOW
+        g_history = trace_reader(
+            str(g_model["model_id"]),
+            _ts(history_start),
+            _ts(cutoff),
         )
-    return predictions, g_model, g_predictions
+        cycle_targets = pd.DataFrame(
+            [
+                {
+                    "station_id": target.station_id,
+                    "target_at": target.target_at,
+                    "horizon_minutes": target.horizon_minutes,
+                    "target_order": target.target_order,
+                }
+                for target in cycle.targets
+            ]
+        )
+        composed = cjs.build_cycle_predictions(
+            cycle_targets=cycle_targets,
+            g_trace=g_trace,
+            g_history=g_history,
+            observations=observations,
+            data_cutoff=cutoff,
+            thresholds=cjs.thresholds_from_artifact(artifact),
+        )
+        by_target = {
+            (str(row.station_id), _ts(row.target_at)): row
+            for row in composed.itertuples(index=False)
+        }
+        predictions: list[CyclePrediction] = []
+        for target in cycle.targets:
+            key = (str(target.station_id), _ts(target.target_at))
+            row = by_target.get(key)
+            if row is None:
+                raise CyclePredictionError(f"Candidate J missing target {key}")
+            predictions.append(
+                CyclePrediction(
+                    cycle_id=cycle.cycle_id,
+                    model_id=str(model["model_id"]),
+                    station_id=str(target.station_id),
+                    target_at=_ts(target.target_at),
+                    horizon_minutes=int(target.horizon_minutes),
+                    prediction=float(row.j_prediction),
+                    trace={
+                        "candidate": cjs.MODEL_VERSION,
+                        "regime": str(row.regime),
+                        "path": str(row.path),
+                        "guard_fired": bool(row.guard_fired),
+                        "g_prediction": float(row.final_prediction),
+                        "data_cutoff": _ts(cutoff),
+                    },
+                )
+            )
+        return predictions, g_model, g_predictions
+    except Exception as exc:  # J-specific adaptation must never cost an official submission
+        return fallback_to_g(f"{type(exc).__name__}: {exc}")
 
 
 def _build_non_baseline_predictions(
