@@ -267,7 +267,10 @@ def test_predict_workflow_prepares_the_k_runtime_only_for_a_k_champion() -> None
     predict = (ROOT / ".github" / "workflows" / "predict.yml").read_text()
     shadow = (ROOT / ".github" / "workflows" / "shadow_candidate_k.yml").read_text()
     assert "run_official_cycle(api, prediction_store, submission_store)" in predict
-    assert re.search(r"if: \$\{\{ steps\.champion\.outputs\.k_active == 'true' \}\}\s*\n\s*run: python -m pip install -r requirements/candidate-k-shadow.txt", predict)
+    # the K runtime is resolved together with the project (numpy 1.x compatible scipy/sklearn)
+    assert re.search(r"if: \$\{\{ steps\.champion\.outputs\.k_active == 'true' \}\}\s*\n\s*run: python -m pip install -e \. -r requirements/candidate-k-shadow.txt", predict)
+    ci_k = (ROOT / ".github" / "workflows" / "ci_candidate_k.yml").read_text()
+    assert "pip install -e '.[dev]' -r requirements/candidate-k-shadow.txt" in ci_k and "pip check" in ci_k
     assert "CANDIDATE_K_CACHE_DIR" in predict and "actions/cache/restore@v4" in predict and "actions/cache/save@v4" in predict
     key = "candidate-k-v2_1-${{ hashFiles('artifacts/shadow/candidate_k_v2_1/metadata.json', 'src/candidate_k_deep.py', 'src/candidate_k_runtime.py') }}"
     assert key in predict and key in shadow  # Predict and the shadow job share the same trained refits

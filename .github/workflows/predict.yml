@@ -59,9 +59,11 @@ jobs:
           print(f"k_active={k_active}")
           PY
 
+      # Resolved together with the project so pip picks scipy/sklearn builds compatible with the
+      # numpy 1.x that torch 2.2.2 needs (a separate install would leave scipy built for numpy 2).
       - name: Install Candidate K runtime (CPU-only PyTorch)
         if: ${{ steps.champion.outputs.k_active == 'true' }}
-        run: python -m pip install -r requirements/candidate-k-shadow.txt
+        run: python -m pip install -e . -r requirements/candidate-k-shadow.txt
 
       # Same cache as the Candidate K shadow job: the daily refit is trained once and reused.
       - name: Restore Candidate K refits
