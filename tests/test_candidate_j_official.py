@@ -105,3 +105,73 @@ def test_load_artifact_supports_active_candidate_j() -> None:
 
     assert artifact["version"] == cjs.MODEL_VERSION
     assert artifact["model_type"] == cjs.MODEL_TYPE
+
+
+def test_candidate_j_official_falls_back_to_g_when_adaptation_fails(monkeypatch) -> None:
+    import candidate_g_adaptive as cg
+
+    cycle = _cycle()
+    model = {
+        "model_id": "j-model",
+        "run_id": "j-run",
+        "model_name": cjs.MODEL_NAME,
+        "model_type": cjs.MODEL_TYPE,
+        "artifact_uri": cjs.DEFAULT_ARTIFACT_URI,
+        "trained_until": cjs.DESIGN_DATA_END,
+        "is_active": True,
+    }
+    artifact = cjs.load_artifact()
+    g_model = {
+        "model_id": "g-model",
+        "run_id": "g-run",
+        "model_name": cjs.CHAMPION_MODEL_NAME,
+        "artifact_uri": "repo://artifacts/shadow/candidate_g_v1",
+        "is_active": False,
+    }
+    g_predictions = [
+        cp.CyclePrediction(
+            cycle_id=cycle.cycle_id,
+            model_id="g-model",
+            station_id=target.station_id,
+            target_at=target.target_at,
+            horizon_minutes=target.horizon_minutes,
+            prediction=value,
+            trace={
+                "candidate": "candidate_g_v1",
+                "base_prediction": value,
+                "calibration_factor": 1.0,
+                "final_prediction": value,
+                "data_cutoff": cycle.data_cutoff,
+            },
+        )
+        for target, value in zip(cycle.targets, (11.0, 21.0))
+    ]
+
+    class OfficialStore:
+        def load_model_by_name(self, name: str) -> dict:
+            assert name == cjs.CHAMPION_MODEL_NAME
+            return g_model
+
+        def prediction_traces_for_model(self, model_id: str, start: str, end: str) -> pd.DataFrame:
+            return pd.DataFrame()
+
+        def feedback_history_until(self, data_cutoff: str, model_row: dict) -> pd.DataFrame:
+            return pd.DataFrame(columns=["station_id", "target_at", "base_prediction", "actual"])
+
+    monkeypatch.setattr(cg, "load_candidate_g_artifact", lambda *_a, **_k: object())
+    monkeypatch.setattr(cp, "build_predictions", lambda *_a, **_k: g_predictions)
+    monkeypatch.setattr(cjs, "build_cycle_predictions", lambda **_k: (_ for _ in ()).throw(RuntimeError("adaptation unavailable")))
+
+    j_predictions, dependency_model, dependency_predictions = cp._build_candidate_j_official_predictions(
+        cycle,
+        model,
+        artifact,
+        pd.DataFrame([{"station_id": "02300", "observed_at": cycle.data_cutoff, "demand": 1.0}]),
+        OfficialStore(),
+    )
+
+    assert dependency_model["model_id"] == "g-model"
+    assert dependency_predictions == g_predictions
+    assert [p.model_id for p in j_predictions] == ["j-model", "j-model"]
+    assert [p.prediction for p in j_predictions] == [11.0, 21.0]
+    assert all(p.trace and p.trace["regime"] == "FALLBACK_G" for p in j_predictions)
