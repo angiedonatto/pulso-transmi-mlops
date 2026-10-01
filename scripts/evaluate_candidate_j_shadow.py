@@ -263,6 +263,20 @@ def _metrics(frame: pd.DataFrame, column: str) -> dict[str, float]:
 
 
 def render_markdown(payload: dict[str, Any]) -> str:
+    if not payload.get("metrics"):
+        return "\n".join(
+            [
+                "# Candidate J Shadow OOS Evaluation",
+                "",
+                f"- Generated at: `{payload['generated_at_utc']}`",
+                f"- Design freeze cutoff: `{payload['design_freeze_cutoff']}`",
+                f"- Complete shared revealed cycles: `{payload['cycles']}`",
+                f"- Verdict: **{payload['verdict']}**",
+                f"- Reason: {payload.get('reason', 'no complete shared revealed cycles')}",
+                "",
+                "No Candidate J tuning or promotion decision can be made from this output.",
+            ]
+        )
     lines = [
         "# Candidate J Shadow OOS Evaluation",
         "",
