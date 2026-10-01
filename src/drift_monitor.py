@@ -41,6 +41,7 @@ class DriftConfig:
     ks_drift: float = 0.30
     min_significant_signals_for_drift: int = 2
     min_new_observations_since_training: int = 500
+    leaderboard_rolling_cycles: int = 24
 
 
 @dataclass(frozen=True)
@@ -58,6 +59,82 @@ class DriftReport:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+# Accuracy definitions (verified 2026-10-01 against GET /v1/leaderboard, rolling_24h and cumulative
+# windows, to 1e-5): the leaderboard `accuracy` is the mean over stations of
+# 100 * max(0, 1 - WAPE_station), where WAPE_station pools every prediction of that station in the
+# window; `raw_wape` is the WAPE pooled over all predictions; cycles without a submission count as
+# predictions of 0. Averaging per-cycle accuracies (the previous monitor behavior) is NOT equivalent.
+LEADERBOARD_ACCURACY_METRIC = "mean_station_accuracy"
+
+
+def accuracy_summary(frame: pd.DataFrame) -> dict[str, Any]:
+    """Leaderboard-compatible metrics for any set of scored rows (needs station_id, actual, abs_error).
+
+    - mean_station_accuracy: leaderboard `accuracy` (primary metric).
+    - global_wape / global_wape_accuracy: leaderboard `raw_wape` and 100 * max(0, 1 - raw_wape).
+    - accuracy_at_20: % of rows with abs_error <= 0.2 * actual (leaderboard `accuracy_at_20`).
+    """
+    if frame.empty:
+        return {"rows": 0, "mean_station_accuracy": math.nan, "global_wape": math.nan, "global_wape_accuracy": math.nan, "accuracy_at_20": math.nan}
+    actual = frame["actual"].astype(float)
+    abs_error = frame["abs_error"].astype(float)
+    actual_sum = float(actual.sum())
+    global_wape = float(abs_error.sum() / actual_sum) if actual_sum > 0 else math.nan
+    station = frame.assign(_actual=actual, _abs_error=abs_error).groupby("station_id").agg(abs_error=("_abs_error", "sum"), actual=("_actual", "sum"))
+    station = station[station["actual"] > 0]
+    station_accuracy = 100.0 * np.maximum(0.0, 1.0 - station["abs_error"] / station["actual"])
+    with np.errstate(divide="ignore", invalid="ignore"):
+        within_20 = (abs_error / actual) <= 0.2
+    return {
+        "rows": int(len(frame)),
+        "mean_station_accuracy": float(station_accuracy.mean()) if len(station_accuracy) else math.nan,
+        "global_wape": global_wape,
+        "global_wape_accuracy": float(100.0 * max(0.0, 1.0 - global_wape)) if math.isfinite(global_wape) else math.nan,
+        "accuracy_at_20": float(100.0 * within_20.mean()),
+    }
+
+
+def leaderboard_window(
+    scored: pd.DataFrame,
+    observations: pd.DataFrame,
+    *,
+    expected_cutoffs: list[pd.Timestamp],
+    stations: list[str],
+    horizons: list[int],
+) -> dict[str, Any]:
+    """Replicate a leaderboard window: official predictions of `expected_cutoffs`, with every
+    cutoff that has no scored official cycle counted as predictions of 0 (as the leaderboard does)."""
+    expected = sorted(pd.Timestamp(cutoff) for cutoff in expected_cutoffs)
+    rows = scored[scored["data_cutoff"].isin(expected)][["station_id", "actual", "abs_error", "data_cutoff"]]
+    covered = set(rows["data_cutoff"])
+    missing = [cutoff for cutoff in expected if cutoff not in covered]
+    actual_lookup = _prepare_observations(observations).set_index(["station_id", "observed_at"])["demand"] if not observations.empty else pd.Series(dtype=float)
+    filler = []
+    unresolved = 0
+    for cutoff in missing:
+        for station_id in stations:
+            for horizon in horizons:
+                key = (str(station_id), cutoff + pd.Timedelta(minutes=int(horizon)))
+                if key in actual_lookup.index:
+                    value = float(actual_lookup.loc[key])
+                    filler.append({"station_id": key[0], "actual": value, "abs_error": value, "data_cutoff": cutoff})
+                else:
+                    unresolved += 1
+    frame = pd.concat([rows, pd.DataFrame(filler)], ignore_index=True) if filler else rows
+    summary = accuracy_summary(frame)
+    return {
+        **summary,
+        "cycles": len(expected),
+        "covered_cycles": len(expected) - len(missing),
+        "coverage": (len(expected) - len(missing)) / len(expected) if expected else math.nan,
+        "missing_cutoffs": [_iso(cutoff) for cutoff in missing],
+        "unresolved_missing_targets": unresolved,
+        "accuracy_if_missing_excluded": accuracy_summary(rows)["mean_station_accuracy"],
+        "start_cutoff": _iso(expected[0]) if expected else None,
+        "end_cutoff": _iso(expected[-1]) if expected else None,
+    }
 
 
 def build_drift_report(
@@ -78,7 +155,7 @@ def build_drift_report(
         forecast_cycle_targets=forecast_cycle_targets,
         observations=observations,
     )
-    performance = performance_drift(scored, config)
+    performance = performance_drift(scored, config, observations=observations, forecast_cycles=forecast_cycles)
     data = data_drift(observations, model_versions=model_versions, config=config)
     residual = residual_drift(scored, config)
     return decide_status(performance, data, residual, config)
@@ -168,40 +245,64 @@ def official_scored_predictions(
     ].sort_values(["accepted_at", "cycle_id", "station_id", "target_observed_at"]).reset_index(drop=True)
 
 
-def performance_drift(scored: pd.DataFrame, config: DriftConfig | None = None) -> dict[str, Any]:
+def performance_drift(
+    scored: pd.DataFrame,
+    config: DriftConfig | None = None,
+    *,
+    observations: pd.DataFrame | None = None,
+    forecast_cycles: pd.DataFrame | None = None,
+) -> dict[str, Any]:
+    """Accuracy over time. Window accuracies (`recent*`, `reference*`, `rolling*`) use the
+    leaderboard formula (`mean_station_accuracy` pooled over the window); `*_global_wape_accuracy`
+    pools all rows; `*_mean_cycle_accuracy` keeps the previous average-of-cycles definition."""
     config = config or DriftConfig()
     if scored.empty:
         return {"status": "INSUFFICIENT_DATA", "cycle_count": 0, "reason": "no fully resolved official cycles"}
 
-    cycle_station = _accuracy_by(scored, ["cycle_id", "station_id"])
-    cycle_accuracy = (
-        cycle_station.groupby("cycle_id", as_index=False)["accuracy"]
-        .mean()
-        .rename(columns={"accuracy": "cycle_accuracy"})
-        .merge(scored.groupby("cycle_id", as_index=False)["accepted_at"].min(), on="cycle_id", how="left")
-        .sort_values(["accepted_at", "cycle_id"])
-        .reset_index(drop=True)
-    )
-    cycle_accuracy["rolling6_accuracy"] = cycle_accuracy["cycle_accuracy"].rolling(6, min_periods=1).mean()
-    cycle_accuracy["rolling12_accuracy"] = cycle_accuracy["cycle_accuracy"].rolling(12, min_periods=1).mean()
+    order = scored.groupby("cycle_id", as_index=False)["accepted_at"].min().sort_values(["accepted_at", "cycle_id"]).reset_index(drop=True)
+    cycle_ids = order["cycle_id"].tolist()
+    rows_by_cycle = {cycle_id: group for cycle_id, group in scored.groupby("cycle_id")}
+    records = []
+    for i, cycle_id in enumerate(cycle_ids):
+        single = accuracy_summary(rows_by_cycle[cycle_id])
+        record = {
+            "cycle_id": cycle_id,
+            "accepted_at": order.loc[i, "accepted_at"],
+            # one-cycle window: leaderboard formula = mean of the station accuracies of that cycle
+            "cycle_accuracy": single["mean_station_accuracy"],
+            "mean_station_accuracy": single["mean_station_accuracy"],
+            "global_wape": single["global_wape"],
+            "global_wape_accuracy": single["global_wape_accuracy"],
+        }
+        for size in (6, 12):
+            window = pd.concat([rows_by_cycle[c] for c in cycle_ids[max(0, i - size + 1) : i + 1]])
+            summary = accuracy_summary(window)
+            record[f"rolling{size}_accuracy"] = summary["mean_station_accuracy"]
+            record[f"rolling{size}_global_wape_accuracy"] = summary["global_wape_accuracy"]
+        records.append(record)
+    cycle_accuracy = pd.DataFrame(records)
+    for size in (6, 12):
+        cycle_accuracy[f"rolling{size}_mean_cycle_accuracy"] = cycle_accuracy["cycle_accuracy"].rolling(size, min_periods=1).mean()
     cycle_count = int(cycle_accuracy["cycle_id"].nunique())
     if cycle_count < config.min_cycles:
         return {
             "status": "INSUFFICIENT_DATA",
             "cycle_count": cycle_count,
+            "accuracy_metric": LEADERBOARD_ACCURACY_METRIC,
             "cycle_accuracy": _records(cycle_accuracy),
             "reason": f"need at least {config.min_cycles} cycles",
         }
 
-    cycle_order = cycle_accuracy["cycle_id"].tolist()
-    recent_ids = cycle_order[-config.recent_cycles :]
-    reference_ids = cycle_order[: max(0, len(cycle_order) - config.recent_cycles)]
+    recent_ids = cycle_ids[-config.recent_cycles :]
+    reference_ids = cycle_ids[: max(0, len(cycle_ids) - config.recent_cycles)]
     if len(reference_ids) > config.reference_cycles:
         reference_ids = reference_ids[-config.reference_cycles :]
     recent = scored[scored["cycle_id"].isin(recent_ids)].copy()
     reference = scored[scored["cycle_id"].isin(reference_ids)].copy()
-    recent_acc = float(cycle_accuracy[cycle_accuracy["cycle_id"].isin(recent_ids)]["cycle_accuracy"].mean())
-    reference_acc = float(cycle_accuracy[cycle_accuracy["cycle_id"].isin(reference_ids)]["cycle_accuracy"].mean()) if reference_ids else math.nan
+    recent_summary = accuracy_summary(recent)
+    reference_summary = accuracy_summary(reference) if not reference.empty else accuracy_summary(reference.iloc[:0])
+    recent_acc = recent_summary["mean_station_accuracy"]
+    reference_acc = reference_summary["mean_station_accuracy"]
     drop = float(reference_acc - recent_acc) if math.isfinite(reference_acc) else 0.0
 
     station_recent = _accuracy_by(recent, ["station_id"]).rename(columns={"accuracy": "recent_accuracy", "wape": "recent_wape"})
@@ -222,23 +323,56 @@ def performance_drift(scored: pd.DataFrame, config: DriftConfig | None = None) -
         status = "DRIFT"
     elif drop >= config.watch_accuracy_drop_pp:
         status = "WATCH"
+    mean_cycle = cycle_accuracy.set_index("cycle_id")["cycle_accuracy"]
     return {
         "status": status,
+        "accuracy_metric": LEADERBOARD_ACCURACY_METRIC,
         "cycle_count": cycle_count,
         "cycle_accuracy": _records(cycle_accuracy),
         "recent_cycle_ids": recent_ids,
         "reference_cycle_ids": reference_ids,
         "recent6_accuracy": _last_value(cycle_accuracy["rolling6_accuracy"]),
         "recent12_accuracy": _last_value(cycle_accuracy["rolling12_accuracy"]),
+        "recent6_global_wape_accuracy": _last_value(cycle_accuracy["rolling6_global_wape_accuracy"]),
+        "recent12_global_wape_accuracy": _last_value(cycle_accuracy["rolling12_global_wape_accuracy"]),
+        "recent6_mean_cycle_accuracy": _last_value(cycle_accuracy["rolling6_mean_cycle_accuracy"]),
+        "recent12_mean_cycle_accuracy": _last_value(cycle_accuracy["rolling12_mean_cycle_accuracy"]),
         "recent_accuracy": recent_acc,
         "reference_accuracy": reference_acc,
+        "recent_global_wape_accuracy": recent_summary["global_wape_accuracy"],
+        "reference_global_wape_accuracy": reference_summary["global_wape_accuracy"],
+        "recent_mean_cycle_accuracy": float(mean_cycle.loc[recent_ids].mean()),
+        "reference_mean_cycle_accuracy": float(mean_cycle.loc[reference_ids].mean()) if reference_ids else math.nan,
+        "recent_accuracy_at_20": recent_summary["accuracy_at_20"],
         "accuracy_drop_pp": drop,
+        "leaderboard_rolling_24h": _leaderboard_rolling(scored, observations, forecast_cycles, config),
         "overall": overall,
         "recent": recent_overall,
         "reference": reference_overall,
         "station_accuracy": _records(station.sort_values("recent_accuracy")),
         "horizon_accuracy": _records(horizon.sort_values("horizon_minutes")),
     }
+
+
+def _leaderboard_rolling(
+    scored: pd.DataFrame,
+    observations: pd.DataFrame | None,
+    forecast_cycles: pd.DataFrame | None,
+    config: DriftConfig,
+) -> dict[str, Any] | None:
+    """Last `leaderboard_rolling_cycles` cutoffs on the cycle cadence, ending at the latest scored cutoff."""
+    if observations is None or forecast_cycles is None or forecast_cycles.empty or scored.empty:
+        return None
+    cutoffs = pd.to_datetime(forecast_cycles["data_cutoff"], utc=True).drop_duplicates().sort_values()
+    if len(cutoffs) < 2:
+        return None
+    cadence = cutoffs.diff().dropna().median()
+    last = pd.Timestamp(scored["data_cutoff"].max())
+    expected = [last - cadence * k for k in range(config.leaderboard_rolling_cycles)][::-1]
+    expected = [cutoff for cutoff in expected if cutoff >= cutoffs.min()]
+    stations = sorted(scored["station_id"].astype(str).unique())
+    horizons = sorted(int(h) for h in scored["horizon_minutes"].unique())
+    return _json_value(leaderboard_window(scored, observations, expected_cutoffs=expected, stations=stations, horizons=horizons))
 
 
 def data_drift(

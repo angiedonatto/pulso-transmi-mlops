@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from candidate_i_shadow import SupabaseCandidateIShadowStore, run_candidate_i_shadow  # noqa: E402
-from drift_monitor import _accuracy_by, official_scored_predictions  # noqa: E402
+from drift_monitor import LEADERBOARD_ACCURACY_METRIC, _accuracy_by, accuracy_summary, official_scored_predictions  # noqa: E402
 from run_monitoring_snapshot import SupabaseMonitoringStore  # noqa: E402
 
 
@@ -31,6 +31,9 @@ DEFAULT_THRESHOLD = 82.0
 
 @dataclass(frozen=True)
 class CandidateScore:
+    """Challenger vs champion on the SAME resolved cycles. `*_accuracy` = leaderboard formula
+    (mean_station_accuracy); `*_global_wape_accuracy` = pooled WAPE (leaderboard raw_wape)."""
+
     model_id: str
     model_name: str
     model_type: str
@@ -41,6 +44,11 @@ class CandidateScore:
     delta_vs_champion_recent: float | None
     worst_station: str | None
     worst_station_accuracy: float | None
+    recent_global_wape_accuracy: float | None = None
+    champion_recent_accuracy: float | None = None
+    champion_recent_global_wape_accuracy: float | None = None
+    delta_vs_champion_global_wape_pp: float | None = None
+    accuracy_metric: str = LEADERBOARD_ACCURACY_METRIC
 
 
 def main() -> None:
@@ -66,6 +74,7 @@ def main() -> None:
     drift = row["report"]["drift"]
     performance = drift.get("performance", {})
     trigger_accuracy = _trigger_accuracy(performance)
+    accuracy_view = accuracy_metrics_view(performance)
     should_remediate = bool(
         trigger_accuracy is not None
         and trigger_accuracy < args.threshold
@@ -88,7 +97,9 @@ def main() -> None:
     payload = {
         "generated_at": row["generated_at"],
         "threshold": args.threshold,
+        "trigger_metric": LEADERBOARD_ACCURACY_METRIC,
         "trigger_accuracy": trigger_accuracy,
+        "accuracy_metrics": accuracy_view,
         "should_remediate": should_remediate,
         "snapshot_status": {
             "overall_status": row["overall_status"],
@@ -107,7 +118,25 @@ def main() -> None:
     print(json.dumps(_console_summary(payload), sort_keys=True, default=str))
 
 
+def accuracy_metrics_view(performance: dict[str, Any]) -> dict[str, Any]:
+    """Both accuracy families side by side so the trigger is never confused with the pooled WAPE."""
+    leaderboard = performance.get("leaderboard_rolling_24h") or {}
+    return {
+        "trigger_metric": LEADERBOARD_ACCURACY_METRIC,
+        "recent6_mean_station_accuracy": performance.get("recent6_accuracy"),
+        "recent6_global_wape_accuracy": performance.get("recent6_global_wape_accuracy"),
+        "recent6_mean_cycle_accuracy_legacy": performance.get("recent6_mean_cycle_accuracy"),
+        "recent12_mean_station_accuracy": performance.get("recent12_accuracy"),
+        "recent12_global_wape_accuracy": performance.get("recent12_global_wape_accuracy"),
+        "leaderboard_rolling_24h_accuracy": leaderboard.get("mean_station_accuracy"),
+        "leaderboard_rolling_24h_raw_wape": leaderboard.get("global_wape"),
+        "leaderboard_rolling_24h_coverage": leaderboard.get("coverage"),
+        "leaderboard_rolling_24h_missing_cutoffs": leaderboard.get("missing_cutoffs", []),
+    }
+
+
 def _trigger_accuracy(performance: dict[str, Any]) -> float | None:
+    """Leaderboard formula (mean_station_accuracy over the last 6 cycles); never the pooled WAPE."""
     for key in ("recent6_accuracy", "recent_accuracy", "recent12_accuracy"):
         value = performance.get(key)
         if isinstance(value, (int, float)) and pd.notna(value):
@@ -195,19 +224,22 @@ def score_shadow_candidates(tables: dict[str, pd.DataFrame], *, recent_cycles: i
 
     models = tables["model_versions"].copy()
     active_model_id = str(active_scored["model_id"].iloc[-1])
-    champion_recent = _mean_cycle_accuracy(active_scored[active_scored["cycle_id"].isin(recent_ids)])
     scores: list[CandidateScore] = []
     for model_id, frame in candidate_rows.groupby("model_id"):
         model_id = str(model_id)
         if model_id == active_model_id:
             continue
+        # same targets only: the champion is scored on the cycles this challenger also resolved
+        champion = accuracy_summary(active_scored[active_scored["cycle_id"].isin(set(frame["cycle_id"]))])
+        challenger = accuracy_summary(frame)
         model = models[models["model_id"].astype(str) == model_id]
         if model.empty:
             model_name = model_type = "unknown"
         else:
             model_name = str(model.iloc[0].get("model_name"))
             model_type = str(model.iloc[0].get("model_type"))
-        recent_accuracy = _mean_cycle_accuracy(frame)
+        recent_accuracy = _finite(challenger["mean_station_accuracy"])
+        champion_recent = _finite(champion["mean_station_accuracy"])
         station = _accuracy_by(frame, ["station_id"]).sort_values("accuracy")
         worst = station.iloc[0] if not station.empty else None
         scores.append(
@@ -222,6 +254,10 @@ def score_shadow_candidates(tables: dict[str, pd.DataFrame], *, recent_cycles: i
                 delta_vs_champion_recent=recent_accuracy - champion_recent if recent_accuracy is not None and champion_recent is not None else None,
                 worst_station=str(worst["station_id"]) if worst is not None else None,
                 worst_station_accuracy=float(worst["accuracy"]) if worst is not None else None,
+                recent_global_wape_accuracy=_finite(challenger["global_wape_accuracy"]),
+                champion_recent_accuracy=champion_recent,
+                champion_recent_global_wape_accuracy=_finite(champion["global_wape_accuracy"]),
+                delta_vs_champion_global_wape_pp=_delta(challenger["global_wape_accuracy"], champion["global_wape_accuracy"]),
             )
         )
     return sorted(scores, key=lambda row: row.delta_vs_champion_recent if row.delta_vs_champion_recent is not None else -999, reverse=True)
@@ -263,13 +299,13 @@ def _resolved_model_predictions(tables: dict[str, pd.DataFrame], *, cycle_ids: l
     return frame
 
 
-def _mean_cycle_accuracy(frame: pd.DataFrame) -> float | None:
-    if frame.empty:
-        return None
-    cycle_station = _accuracy_by(frame, ["cycle_id", "station_id"])
-    if cycle_station.empty:
-        return None
-    return float(cycle_station.groupby("cycle_id")["accuracy"].mean().mean())
+def _finite(value: Any) -> float | None:
+    return float(value) if isinstance(value, (int, float)) and pd.notna(value) else None
+
+
+def _delta(a: Any, b: Any) -> float | None:
+    a, b = _finite(a), _finite(b)
+    return a - b if a is not None and b is not None else None
 
 
 def recommend_action(
@@ -311,7 +347,11 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "",
         f"- Generated at: `{payload['generated_at']}`",
         f"- Accuracy threshold: `{payload['threshold']}`",
+        f"- Trigger metric: `{payload['trigger_metric']}` (leaderboard formula: mean over stations of 100*max(0, 1-WAPE_station))",
         f"- Trigger accuracy: `{payload['trigger_accuracy']}`",
+        f"- Recent6 global WAPE accuracy (pooled, = leaderboard raw_wape): `{payload['accuracy_metrics']['recent6_global_wape_accuracy']}`",
+        f"- Recent6 mean-of-cycles accuracy (legacy, not leaderboard): `{payload['accuracy_metrics']['recent6_mean_cycle_accuracy_legacy']}`",
+        f"- Leaderboard rolling 24h estimate: accuracy `{payload['accuracy_metrics']['leaderboard_rolling_24h_accuracy']}`, coverage `{payload['accuracy_metrics']['leaderboard_rolling_24h_coverage']}`",
         f"- Should remediate: `{payload['should_remediate']}`",
         f"- Snapshot status: `{payload['snapshot_status']['overall_status']}` / drift `{payload['snapshot_status']['drift_status']}`",
         "",
@@ -331,15 +371,16 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "",
         "## Candidate Scores",
         "",
-        "| model | cycles | recent accuracy | delta vs champion | worst station |",
-        "|---|---:|---:|---:|---|",
+        "| model | shared cycles | mean station acc | champion (same cycles) | delta pp | global WAPE acc | delta global pp | worst station |",
+        "|---|---:|---:|---:|---:|---:|---:|---|",
     ]
     for row in payload["candidate_scores"]:
         lines.append(
-            f"| {row['model_name']} | {row['cycles']} | {_fmt(row['recent_accuracy'])} | {_fmt(row['delta_vs_champion_recent'])} | {row['worst_station']} ({_fmt(row['worst_station_accuracy'])}) |"
+            f"| {row['model_name']} | {row['cycles']} | {_fmt(row['recent_accuracy'])} | {_fmt(row['champion_recent_accuracy'])} | {_fmt(row['delta_vs_champion_recent'])} | "
+            f"{_fmt(row['recent_global_wape_accuracy'])} | {_fmt(row['delta_vs_champion_global_wape_pp'])} | {row['worst_station']} ({_fmt(row['worst_station_accuracy'])}) |"
         )
     if not payload["candidate_scores"]:
-        lines.append("| none | 0 |  |  |  |")
+        lines.append("| none | 0 |  |  |  |  |  |  |")
     lines += [
         "",
         "## Safety",
@@ -357,7 +398,9 @@ def _fmt(value: Any) -> str:
 
 def _console_summary(payload: dict[str, Any]) -> dict[str, Any]:
     return {
+        "trigger_metric": payload["trigger_metric"],
         "trigger_accuracy": payload["trigger_accuracy"],
+        "trigger_global_wape_accuracy": payload["accuracy_metrics"]["recent6_global_wape_accuracy"],
         "should_remediate": payload["should_remediate"],
         "diagnosis_types": payload["diagnosis"]["types"],
         "shadow_status": (payload.get("shadow_result") or {}).get("status", "not_run"),
