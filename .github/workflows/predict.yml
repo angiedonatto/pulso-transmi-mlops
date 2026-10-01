@@ -49,5 +49,8 @@ jobs:
               f"status={result.status} "
               f"cycle_id={result.cycle_id} "
               f"submission_id={result.submission_id}"
-          )
+            )
           PY
+
+      - name: Generate monitoring snapshot
+        run: python scripts/run_monitoring_snapshot.py

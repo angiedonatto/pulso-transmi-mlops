@@ -1,9 +1,14 @@
-# Pulso TransMi — SDK para estudiantes
+# Pulso TransMi — MLOps SDK y Control Center
 
 Starter kit oficial del reto MLOps **Pulso TransMi**. Incluye un cliente Python,
 ejemplos reproducibles y una plantilla de GitHub Actions para construir un
 pipeline que descargue datos, entrene, monitoree y posteriormente envíe
 predicciones.
+
+Este repositorio tambien contiene la capa operativa del proyecto: pipeline de
+prediccion oficial, Candidate G, monitoreo canonico de drift, snapshots de
+observabilidad y un dashboard Next.js listo para desplegar con root directory
+`dashboard/`.
 
 > **Disponible públicamente:** la API de lectura está en
 > `https://pulso-transmi.72-60-245-2.sslip.io` y su documentación interactiva en
@@ -36,6 +41,30 @@ python examples/02_naive_baseline.py
 ```
 
 En Windows PowerShell, la activación es `.venv\Scripts\Activate.ps1`.
+
+Para trabajar con el pipeline completo y las pruebas actuales:
+
+```bash
+python -m pip install -e '.[dev,ml]'
+PYTHONPATH=.:src pytest -q
+```
+
+## Estado actual del proyecto
+
+La version actual ya no es solo un SDK base. Incluye:
+
+- ingesta incremental de observaciones;
+- sincronizacion de ciclos de forecast;
+- generacion de predicciones oficiales;
+- submission oficial idempotente;
+- Candidate B y Candidate G;
+- observabilidad de Candidate G via `prediction_traces`;
+- monitoreo canonico con `src/drift_monitor.py`;
+- snapshots persistidos en `monitoring_snapshots`;
+- dashboard MLOps en `dashboard/`;
+- workflow GitHub Actions que genera snapshot despues del ciclo oficial.
+
+Consulta [AGENTS.md](AGENTS.md) antes de hacer cambios automatizados o de agente.
 
 ## Uso del SDK
 
@@ -138,18 +167,57 @@ El repositorio de cada equipo debe dejar trazabilidad de:
 
 ## GitHub Actions
 
-[`templates/pipeline.yml`](templates/pipeline.yml) es una plantilla manual. Cópiala
-a `.github/workflows/pipeline.yml` dentro del repositorio de tu equipo. Cuando se
-habilite la competencia, agrega el API key como secret y luego activa el horario
-indicado por el profesor.
+[`templates/pipeline.yml`](templates/pipeline.yml) es una plantilla manual para
+equipos que empiezan desde cero.
+
+Este repo de trabajo ya incluye workflows productivos:
+
+- `.github/workflows/predict.yml`: sincroniza stream, genera predicciones,
+  envia submission oficial y genera `monitoring_snapshots`;
+- `.github/workflows/shadow.yml`: ejecuta Candidate B shadow;
+- `.github/workflows/ci.yml`: corre pruebas.
 
 Nunca escribas API keys, contraseñas de Supabase ni tokens dentro del código.
 
-## Supabase y Vercel
+## Supabase, monitoreo y Vercel
 
-Supabase es opcional para persistir ejecuciones, métricas, predicciones y estado
-del modelo. Vercel es opcional y corresponde al bono de visualización. Ninguna de
-las dos plataformas reemplaza el repositorio ni GitHub Actions.
+Supabase persiste ejecuciones, modelos, predicciones, submissions, calidad de
+datos, trazas de runtime y snapshots de monitoreo.
+
+Tablas principales existentes:
+
+- `stations`, `time_slots`, `observations`, `context_observations`;
+- `pipeline_runs`, `model_versions`, `predictions`;
+- `forecast_cycles`, `forecast_cycle_targets`, `submission_receipts`;
+- `metrics_by_station`, `data_quality_checks`, `stream_cursors`;
+- `runtime_ingestion_events`.
+
+Tablas de observabilidad agregadas:
+
+- `prediction_traces`: trazas de Candidate G (`base_prediction`,
+  `calibration_factor`, `final_prediction`, `feedback_samples`, `data_cutoff`);
+- `monitoring_snapshots`: estado canonico consumido por el dashboard.
+
+La arquitectura completa esta documentada en
+[docs/monitoring-architecture.md](docs/monitoring-architecture.md).
+
+El dashboard vive en [dashboard/](dashboard/) y se despliega en Vercel usando
+`dashboard/` como Root Directory.
+
+```bash
+cd dashboard
+npm install
+npm run typecheck
+npm run build
+```
+
+Variables para Vercel:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_DASHBOARD_REFRESH_SECONDS`
+
+No usar `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`.
 
 Consulta [docs/student-project.md](docs/student-project.md) para el flujo completo
 y los entregables.
@@ -166,11 +234,49 @@ Accuracy = 100 × max(0, 1 - WAPE)
 La métrica se calcula por estación y luego se promedia. El contrato definitivo
 de submissions y leaderboard se publicará antes de iniciar la ventana competitiva.
 
+## Monitoreo canonico
+
+No duplicar calculos de accuracy, bias o drift en el dashboard. La fuente
+canonica es `src/drift_monitor.py`, especialmente:
+
+- `official_scored_predictions(...)`;
+- `performance_drift(...)`;
+- `data_drift(...)`;
+- `residual_drift(...)`;
+- `build_drift_report(...)`.
+
+El snapshot operacional se genera con:
+
+```bash
+python scripts/run_monitoring_snapshot.py
+```
+
+Tambien se puede escribir una copia local:
+
+```bash
+python scripts/run_monitoring_snapshot.py --output reports/monitoring/latest.json
+```
+
+## Candidate G
+
+Candidate G usa una capa adaptativa G2 con feedback de error resuelto. Sus
+parametros productivos no deben cambiarse incidentalmente:
+
+- `ALPHA = 1.0`;
+- `FEEDBACK_WINDOW = 8`;
+- `CLIP_LOW = 0.35`;
+- `CLIP_HIGH = 2.5`;
+- estimador `ewma`.
+
+La observabilidad de Candidate G se guarda aparte en `prediction_traces` y no
+cambia el payload oficial. La reconstruccion de feedback historico normaliza las
+observaciones production-shaped antes de generar muestras supervisadas.
+
 ## Desarrollo del SDK
 
 ```bash
 python -m pip install -e '.[dev,ml]'
-pytest -q
+PYTHONPATH=.:src pytest -q
 ```
 
 Este repositorio es público para estudiantes. No debe contener ground truth
