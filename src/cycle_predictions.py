@@ -70,10 +70,19 @@ def generate_predictions_for_cycle(cycle: ForecastCycle, store: PredictionStore)
     model = store.load_active_champion()
     artifact = _load_artifact(model)
     observations = store.observations_until(cycle.data_cutoff)
-    feedback_frame = _feedback_history_for_model(store, cycle, model, artifact)
-    predictions = build_predictions(cycle, model["model_id"], artifact, observations, feedback_frame=feedback_frame)
+    dependency_model: dict[str, Any] | None = None
+    dependency_predictions: list[CyclePrediction] | None = None
+    if _is_candidate_j_model(model):
+        predictions, dependency_model, dependency_predictions = _build_candidate_j_official_predictions(
+            cycle, model, artifact, observations, store
+        )
+    else:
+        feedback_frame = _feedback_history_for_model(store, cycle, model, artifact)
+        predictions = build_predictions(cycle, model["model_id"], artifact, observations, feedback_frame=feedback_frame)
     validate_predictions(cycle, predictions)
     store.persist_cycle_targets(cycle)
+    if dependency_model is not None and dependency_predictions is not None:
+        store.persist_predictions(cycle, dependency_model, dependency_predictions)
     written = store.persist_predictions(cycle, model, predictions)
     values = [prediction.prediction for prediction in predictions]
     return CyclePredictionResult(
@@ -339,6 +348,64 @@ class SupabaseCyclePredictionStore(SupabaseBaselineStore):
                 )
         return pd.DataFrame(feedback_rows).sort_values(["station_id", "target_at"]).reset_index(drop=True)
 
+    def load_model_by_name(self, model_name: str) -> dict[str, Any]:
+        response = self._client.get(
+            "/model_versions",
+            params={
+                "model_name": f"eq.{model_name}",
+                "select": "*,pipeline_runs(git_commit,started_at)",
+                "order": "trained_until.desc",
+                "limit": "1",
+            },
+        )
+        response.raise_for_status()
+        rows = response.json()
+        if not rows:
+            raise CyclePredictionError(f"model dependency not found: {model_name}")
+        return rows[0]
+
+    def prediction_traces_for_model(
+        self,
+        model_id: str,
+        start_cutoff: str,
+        end_cutoff: str,
+    ) -> pd.DataFrame:
+        rows: list[dict[str, Any]] = []
+        offset = 0
+        page_size = 1000
+        while True:
+            response = self._client.get(
+                "/prediction_traces",
+                params={
+                    "model_id": f"eq.{model_id}",
+                    "data_cutoff": f"gte.{start_cutoff}",
+                    "and": f"(data_cutoff.lt.{end_cutoff})",
+                    "select": "cycle_id,station_id,target_at,horizon_minutes,base_prediction,calibration_factor,final_prediction,data_cutoff",
+                    "order": "data_cutoff.asc,target_at.asc,station_id.asc",
+                    "limit": str(page_size),
+                    "offset": str(offset),
+                },
+            )
+            response.raise_for_status()
+            page = response.json()
+            rows.extend(page)
+            if len(page) < page_size:
+                break
+            offset += page_size
+        return pd.DataFrame(
+            rows,
+            columns=[
+                "cycle_id",
+                "station_id",
+                "target_at",
+                "horizon_minutes",
+                "base_prediction",
+                "calibration_factor",
+                "final_prediction",
+                "data_cutoff",
+            ],
+        )
+
     def _post_upsert(self, path: str, payload: Any, *, on_conflict: str) -> None:
         response = self._client.post(
             path,
@@ -362,11 +429,15 @@ def _load_artifact(model: dict[str, Any]) -> Any:
             from candidate_b_shadow import load_shadow_artifact
             from candidate_g_adaptive import MODEL_TYPE as CANDIDATE_G_MODEL_TYPE
             from candidate_g_adaptive import load_candidate_g_artifact
+            from candidate_j_shadow import MODEL_TYPE as CANDIDATE_J_MODEL_TYPE
+            from candidate_j_shadow import load_artifact as load_candidate_j_artifact
 
             if model.get("model_type") == CANDIDATE_G_MODEL_TYPE:
                 return load_candidate_g_artifact(artifact_uri)
             if model.get("model_type") == CANDIDATE_B_MODEL_TYPE:
                 return load_shadow_artifact(artifact_uri)
+            if model.get("model_type") == CANDIDATE_J_MODEL_TYPE:
+                return load_candidate_j_artifact(artifact_uri)
             return load_shadow_artifact(artifact_uri)
         except Exception as exc:
             raise CyclePredictionError(f"cannot load champion artifact: {artifact_uri}") from exc
@@ -376,6 +447,141 @@ def _load_artifact(model: dict[str, Any]) -> Any:
         raise CyclePredictionError(f"cannot read champion artifact: {artifact_uri}") from exc
     except json.JSONDecodeError as exc:
         raise CyclePredictionError(f"invalid champion artifact JSON: {artifact_uri}") from exc
+
+
+def _is_candidate_j_model(model: dict[str, Any]) -> bool:
+    try:
+        from candidate_j_shadow import MODEL_TYPE as CANDIDATE_J_MODEL_TYPE
+    except ImportError:
+        return False
+    return model.get("model_type") == CANDIDATE_J_MODEL_TYPE
+
+
+def _build_candidate_j_official_predictions(
+    cycle: ForecastCycle,
+    model: dict[str, Any],
+    artifact: dict[str, Any],
+    observations: pd.DataFrame,
+    store: PredictionStore,
+) -> tuple[list[CyclePrediction], dict[str, Any], list[CyclePrediction]]:
+    """Build official Candidate J predictions while keeping Candidate G as its causal dependency.
+
+    J v1.1 was designed as a regime-aware wrapper around G. Once J is active, G is no longer the
+    champion, so we reconstruct G in-memory for the same cycle, persist those dependency predictions
+    and traces under G's own inactive model_id, and then compose J from that trace. This keeps G2
+    feedback causal and current without sending G officially.
+    """
+    try:
+        import candidate_j_shadow as cjs
+        from candidate_g_adaptive import load_candidate_g_artifact
+    except ImportError as exc:
+        raise CyclePredictionError("candidate J production dependencies are unavailable") from exc
+
+    if not isinstance(artifact, dict):
+        raise CyclePredictionError("candidate J artifact must be metadata JSON")
+    cjs.validate_artifact(artifact)
+
+    model_reader = getattr(store, "load_model_by_name", None)
+    trace_reader = getattr(store, "prediction_traces_for_model", None)
+    feedback_reader = getattr(store, "feedback_history_until", None)
+    if model_reader is None or trace_reader is None or feedback_reader is None:
+        raise CyclePredictionError("prediction store does not support Candidate J production dependencies")
+
+    g_model = model_reader(cjs.CHAMPION_MODEL_NAME)
+    if str(g_model.get("model_id")) == str(model.get("model_id")):
+        raise CyclePredictionError("Candidate J dependency cannot reference itself")
+    if not g_model.get("artifact_uri"):
+        raise CyclePredictionError("Candidate G dependency is missing artifact_uri")
+
+    try:
+        g_artifact = load_candidate_g_artifact(str(g_model["artifact_uri"]))
+    except Exception as exc:
+        raise CyclePredictionError("cannot load Candidate G dependency artifact") from exc
+
+    feedback_frame = feedback_reader(cycle.data_cutoff, g_model)
+    g_predictions = build_predictions(
+        cycle,
+        str(g_model["model_id"]),
+        g_artifact,
+        observations,
+        feedback_frame=feedback_frame,
+    )
+    validate_predictions(cycle, g_predictions)
+
+    current_trace_rows: list[dict[str, Any]] = []
+    for prediction in g_predictions:
+        trace = prediction.trace or {}
+        if trace.get("candidate") != "candidate_g_v1":
+            raise CyclePredictionError("Candidate G dependency did not emit production trace")
+        current_trace_rows.append(
+            {
+                "cycle_id": prediction.cycle_id,
+                "station_id": prediction.station_id,
+                "target_at": prediction.target_at,
+                "horizon_minutes": prediction.horizon_minutes,
+                "base_prediction": trace.get("base_prediction"),
+                "calibration_factor": trace.get("calibration_factor"),
+                "final_prediction": trace.get("final_prediction", prediction.prediction),
+                "data_cutoff": trace.get("data_cutoff", cycle.data_cutoff),
+            }
+        )
+    g_trace = pd.DataFrame(current_trace_rows)
+
+    cutoff = pd.Timestamp(cycle.data_cutoff).tz_convert("UTC")
+    history_start = cutoff - cjs.HISTORY_WINDOW
+    g_history = trace_reader(
+        str(g_model["model_id"]),
+        _ts(history_start),
+        _ts(cutoff),
+    )
+    cycle_targets = pd.DataFrame(
+        [
+            {
+                "station_id": target.station_id,
+                "target_at": target.target_at,
+                "horizon_minutes": target.horizon_minutes,
+                "target_order": target.target_order,
+            }
+            for target in cycle.targets
+        ]
+    )
+    composed = cjs.build_cycle_predictions(
+        cycle_targets=cycle_targets,
+        g_trace=g_trace,
+        g_history=g_history,
+        observations=observations,
+        data_cutoff=cutoff,
+        thresholds=cjs.thresholds_from_artifact(artifact),
+    )
+    by_target = {
+        (str(row.station_id), _ts(row.target_at)): row
+        for row in composed.itertuples(index=False)
+    }
+    predictions: list[CyclePrediction] = []
+    for target in cycle.targets:
+        key = (str(target.station_id), _ts(target.target_at))
+        row = by_target.get(key)
+        if row is None:
+            raise CyclePredictionError(f"Candidate J missing target {key}")
+        predictions.append(
+            CyclePrediction(
+                cycle_id=cycle.cycle_id,
+                model_id=str(model["model_id"]),
+                station_id=str(target.station_id),
+                target_at=_ts(target.target_at),
+                horizon_minutes=int(target.horizon_minutes),
+                prediction=float(row.j_prediction),
+                trace={
+                    "candidate": cjs.MODEL_VERSION,
+                    "regime": str(row.regime),
+                    "path": str(row.path),
+                    "guard_fired": bool(row.guard_fired),
+                    "g_prediction": float(row.final_prediction),
+                    "data_cutoff": _ts(cutoff),
+                },
+            )
+        )
+    return predictions, g_model, g_predictions
 
 
 def _build_non_baseline_predictions(
