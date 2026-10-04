@@ -11,7 +11,7 @@ on:
       - tests/test_stream_schema_v2.py
       - .github/workflows/predict.yml
   schedule:
-    - cron: "2 * * * *"
+    - cron: "52 * * * *"
   workflow_dispatch:
 
 concurrency:
