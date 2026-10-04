@@ -1,6 +1,10 @@
 name: Retrain Autopilot
 
 on:
+  workflow_run:
+    workflows: [Predict]
+    types: [completed]
+    branches: [student-work]
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
@@ -24,6 +28,7 @@ concurrency:
 
 jobs:
   diagnose-and-remediate:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
 

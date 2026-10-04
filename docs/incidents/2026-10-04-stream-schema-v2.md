@@ -23,6 +23,12 @@ K remains the champion. Its native panel already forward-fills missing inputs ca
 
 The capped forecast_cycle_targets read was ordered ascending and stopped at 10,000 rows. With 10,992+ targets this excluded the newest cycles, independently freezing the monitor at older accuracy values. Capped operational tables now read most recent rows, including targets ordered by target_at descending. Metric/scoring definitions are unchanged. Monitoring, drift, stream and runtime suites passed 84 tests.
 
+## Production verification
+
+The corrected forward sync automatically ingested 23 additional valid observations and advanced its watermark to virtual 2026-09-21T01:00Z. The official cycle cyc_official-20260921_20260921T010000Z was accepted at 2026-10-04T11:56:53Z with 48 predictions. All 48 K traces had nonnull seasonal weights and feedback_samples=31380, proving native K inference resumed rather than fallback J. Outcomes were not yet revealed, so no future accuracy gain is claimed.
+
+Retrain Autopilot is also triggered after successful Predict completion on student-work, retaining its cron and manual triggers. This restores prompt diagnostics/shadow evaluation; it deliberately does not imply automatic champion promotion.
+
 ## Follow-up
 
 Five hourly checks were scheduled during the user's trip. Compare stream watermark to virtual forecast data_cutoff, not wall clock. Verify 48 exact-target submissions and nonzero K train_rows/nonnull seasonal_weight, then report measured accuracy with window and coverage. Promotion/rollback requires comparable causal evidence; ingestion should be repaired first.
