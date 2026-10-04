@@ -1,0 +1,893 @@
+{
+  "generated_at": "2026-10-04T12:25:12.149996+00:00",
+  "model_name": "candidate_k_v2_1_regime_robust_dl",
+  "model_id": "8a0e5ad3-f8c8-4cc3-9c1e-e183a80326d4",
+  "model_type": "shadow_deep_candidate_k",
+  "artifact_uri": "repo://artifacts/shadow/candidate_k_v2_1",
+  "latest_revealed_observation": "2026-09-21 01:00:00+00:00",
+  "evaluation": "retrospective replay of unchanged frozen K with repaired collector inputs; not new official submissions",
+  "causality": "observed_at<=data_cutoff; v2 released_at<=cycle.first_seen_at; daily refit only observed targets<=refit_time",
+  "database_writes": false,
+  "parameter_changes": false,
+  "windows": {
+    "6": {
+      "cycles": 6,
+      "first_cutoff": "2026-09-20 19:00:00+00:00",
+      "last_cutoff": "2026-09-21 00:00:00+00:00",
+      "expected_rows": 288,
+      "revealed_rows": 282,
+      "complete_cycles": 3,
+      "revealed_coverage": 0.9791666666666666,
+      "observed_targets_metrics": {
+        "k_replay": {
+          "rows": 282,
+          "mean_station_accuracy": 80.95288219986855,
+          "global_wape": 0.1888751134582326,
+          "global_wape_accuracy": 81.11248865417674,
+          "accuracy_at_20": 59.21985815602837
+        },
+        "k_seasonal_expert": {
+          "rows": 282,
+          "mean_station_accuracy": 46.03431005112731,
+          "global_wape": 0.4745878725811498,
+          "global_wape_accuracy": 52.54121274188501,
+          "accuracy_at_20": 23.04964539007092
+        },
+        "official_as_sent": {
+          "rows": 282,
+          "mean_station_accuracy": 17.209734190941287,
+          "global_wape": 0.8135977778700313,
+          "global_wape_accuracy": 18.64022221299687,
+          "accuracy_at_20": 12.76595744680851
+        },
+        "baseline_latest": {
+          "rows": 282,
+          "mean_station_accuracy": 75.19650277924872,
+          "global_wape": 0.24056755885198322,
+          "global_wape_accuracy": 75.94324411480167,
+          "accuracy_at_20": 45.39007092198582
+        },
+        "baseline_lag96": {
+          "rows": 282,
+          "mean_station_accuracy": 14.407385987185705,
+          "global_wape": 1.0567088573578416,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 7.092198581560284
+        }
+      },
+      "complete_cycles_metrics": {
+        "k_replay": {
+          "rows": 144,
+          "mean_station_accuracy": 82.85738088583946,
+          "global_wape": 0.16806072282812326,
+          "global_wape_accuracy": 83.19392771718768,
+          "accuracy_at_20": 63.888888888888886
+        },
+        "k_seasonal_expert": {
+          "rows": 144,
+          "mean_station_accuracy": 44.651542119777524,
+          "global_wape": 0.487326469801573,
+          "global_wape_accuracy": 51.2673530198427,
+          "accuracy_at_20": 22.916666666666664
+        },
+        "official_as_sent": {
+          "rows": 144,
+          "mean_station_accuracy": 25.805297477861075,
+          "global_wape": 0.7967007859896376,
+          "global_wape_accuracy": 20.329921401036245,
+          "accuracy_at_20": 13.88888888888889
+        },
+        "baseline_latest": {
+          "rows": 144,
+          "mean_station_accuracy": 74.87766812036583,
+          "global_wape": 0.2146765695423094,
+          "global_wape_accuracy": 78.53234304576905,
+          "accuracy_at_20": 50
+        },
+        "baseline_lag96": {
+          "rows": 144,
+          "mean_station_accuracy": 17.19555223740907,
+          "global_wape": 1.0649146194375674,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 4.861111111111112
+        }
+      }
+    },
+    "12": {
+      "cycles": 12,
+      "first_cutoff": "2026-09-20 13:00:00+00:00",
+      "last_cutoff": "2026-09-21 00:00:00+00:00",
+      "expected_rows": 576,
+      "revealed_rows": 564,
+      "complete_cycles": 5,
+      "revealed_coverage": 0.9791666666666666,
+      "observed_targets_metrics": {
+        "k_replay": {
+          "rows": 564,
+          "mean_station_accuracy": 76.16207019773914,
+          "global_wape": 0.2354587077588213,
+          "global_wape_accuracy": 76.45412922411788,
+          "accuracy_at_20": 52.304964539007095
+        },
+        "k_seasonal_expert": {
+          "rows": 564,
+          "mean_station_accuracy": 41.43797421221569,
+          "global_wape": 0.5369369851995124,
+          "global_wape_accuracy": 46.30630148004876,
+          "accuracy_at_20": 19.326241134751772
+        },
+        "official_as_sent": {
+          "rows": 564,
+          "mean_station_accuracy": 16.381954638622613,
+          "global_wape": 0.8299945409867444,
+          "global_wape_accuracy": 17.00054590132556,
+          "accuracy_at_20": 12.056737588652481
+        },
+        "baseline_latest": {
+          "rows": 564,
+          "mean_station_accuracy": 75.38937353246719,
+          "global_wape": 0.24404915413754183,
+          "global_wape_accuracy": 75.59508458624582,
+          "accuracy_at_20": 47.16312056737589
+        },
+        "baseline_lag96": {
+          "rows": 564,
+          "mean_station_accuracy": 14.52576681780063,
+          "global_wape": 1.0416617822896397,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 6.914893617021277
+        }
+      },
+      "complete_cycles_metrics": {
+        "k_replay": {
+          "rows": 240,
+          "mean_station_accuracy": 76.89256196697717,
+          "global_wape": 0.21458632759832544,
+          "global_wape_accuracy": 78.54136724016746,
+          "accuracy_at_20": 54.58333333333333
+        },
+        "k_seasonal_expert": {
+          "rows": 240,
+          "mean_station_accuracy": 44.31138308090963,
+          "global_wape": 0.5196305103156696,
+          "global_wape_accuracy": 48.03694896843304,
+          "accuracy_at_20": 19.583333333333332
+        },
+        "official_as_sent": {
+          "rows": 240,
+          "mean_station_accuracy": 24.986824989312566,
+          "global_wape": 0.8129283216494151,
+          "global_wape_accuracy": 18.707167835058492,
+          "accuracy_at_20": 12.916666666666668
+        },
+        "baseline_latest": {
+          "rows": 240,
+          "mean_station_accuracy": 74.48404800000652,
+          "global_wape": 0.23557431226823478,
+          "global_wape_accuracy": 76.44256877317652,
+          "accuracy_at_20": 47.91666666666667
+        },
+        "baseline_lag96": {
+          "rows": 240,
+          "mean_station_accuracy": 16.61017234382178,
+          "global_wape": 1.0802547671874758,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 5.416666666666667
+        }
+      }
+    }
+  },
+  "per_cycle": [
+    {
+      "cycle_id": "cyc_official-20260921_20260920T130000Z",
+      "data_cutoff": "2026-09-20 13:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 48,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "disk",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.029883593320846558,
+      "metrics": {
+        "k_replay": {
+          "rows": 48,
+          "mean_station_accuracy": 55.249545106038234,
+          "global_wape": 0.38603413691638283,
+          "global_wape_accuracy": 61.39658630836171,
+          "accuracy_at_20": 20.833333333333336
+        },
+        "k_seasonal_expert": {
+          "rows": 48,
+          "mean_station_accuracy": 38.831111119983696,
+          "global_wape": 0.6177137435088891,
+          "global_wape_accuracy": 38.228625649111095,
+          "accuracy_at_20": 12.5
+        },
+        "official_as_sent": {
+          "rows": 48,
+          "mean_station_accuracy": 26.41684281135646,
+          "global_wape": 0.7920065561919807,
+          "global_wape_accuracy": 20.799344380801934,
+          "accuracy_at_20": 10.416666666666668
+        },
+        "baseline_latest": {
+          "rows": 48,
+          "mean_station_accuracy": 63.14493339031413,
+          "global_wape": 0.3112120415900304,
+          "global_wape_accuracy": 68.87879584099696,
+          "accuracy_at_20": 41.66666666666667
+        },
+        "baseline_lag96": {
+          "rows": 48,
+          "mean_station_accuracy": 18.58202095394408,
+          "global_wape": 0.9837093202207124,
+          "global_wape_accuracy": 1.6290679779287554,
+          "accuracy_at_20": 2.083333333333333
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T140000Z",
+      "data_cutoff": "2026-09-20 14:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 45,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.0058640106581151485,
+      "metrics": {
+        "k_replay": {
+          "rows": 45,
+          "mean_station_accuracy": 67.2555130373624,
+          "global_wape": 0.29786720542967554,
+          "global_wape_accuracy": 70.21327945703244,
+          "accuracy_at_20": 44.44444444444444
+        },
+        "k_seasonal_expert": {
+          "rows": 45,
+          "mean_station_accuracy": 32.70652060186122,
+          "global_wape": 0.6803807386567691,
+          "global_wape_accuracy": 31.961926134323093,
+          "accuracy_at_20": 8.88888888888889
+        },
+        "official_as_sent": {
+          "rows": 45,
+          "mean_station_accuracy": 22.943330681243754,
+          "global_wape": 0.8968675592005054,
+          "global_wape_accuracy": 10.313244079949458,
+          "accuracy_at_20": 2.2222222222222223
+        },
+        "baseline_latest": {
+          "rows": 45,
+          "mean_station_accuracy": 75.42961316625122,
+          "global_wape": 0.18502506025940238,
+          "global_wape_accuracy": 81.49749397405976,
+          "accuracy_at_20": 57.77777777777777
+        },
+        "baseline_lag96": {
+          "rows": 45,
+          "mean_station_accuracy": 25.70789773077817,
+          "global_wape": 0.9011363201591613,
+          "global_wape_accuracy": 9.886367984083865,
+          "accuracy_at_20": 8.88888888888889
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T150000Z",
+      "data_cutoff": "2026-09-20 15:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 47,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.004725924227386713,
+      "metrics": {
+        "k_replay": {
+          "rows": 47,
+          "mean_station_accuracy": 60.06834665154409,
+          "global_wape": 0.3830882582723162,
+          "global_wape_accuracy": 61.691174172768385,
+          "accuracy_at_20": 42.5531914893617
+        },
+        "k_seasonal_expert": {
+          "rows": 47,
+          "mean_station_accuracy": 49.608164909871824,
+          "global_wape": 0.47043795470377214,
+          "global_wape_accuracy": 52.95620452962279,
+          "accuracy_at_20": 19.148936170212767
+        },
+        "official_as_sent": {
+          "rows": 47,
+          "mean_station_accuracy": 20.931579918254133,
+          "global_wape": 0.85243627838372,
+          "global_wape_accuracy": 14.756372161627995,
+          "accuracy_at_20": 4.25531914893617
+        },
+        "baseline_latest": {
+          "rows": 47,
+          "mean_station_accuracy": 67.79238522822652,
+          "global_wape": 0.2614183888822522,
+          "global_wape_accuracy": 73.85816111177478,
+          "accuracy_at_20": 46.808510638297875
+        },
+        "baseline_lag96": {
+          "rows": 47,
+          "mean_station_accuracy": 23.723757816960998,
+          "global_wape": 0.9163381515549716,
+          "global_wape_accuracy": 8.366184844502843,
+          "accuracy_at_20": 4.25531914893617
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T160000Z",
+      "data_cutoff": "2026-09-20 16:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 47,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.005111343692988157,
+      "metrics": {
+        "k_replay": {
+          "rows": 47,
+          "mean_station_accuracy": 75.63073000975791,
+          "global_wape": 0.20063178383148147,
+          "global_wape_accuracy": 79.93682161685184,
+          "accuracy_at_20": 51.06382978723404
+        },
+        "k_seasonal_expert": {
+          "rows": 47,
+          "mean_station_accuracy": 42.53678689125899,
+          "global_wape": 0.7430065347636511,
+          "global_wape_accuracy": 25.69934652363489,
+          "accuracy_at_20": 10.638297872340425
+        },
+        "official_as_sent": {
+          "rows": 47,
+          "mean_station_accuracy": 31.5937797704921,
+          "global_wape": 0.9457520789154944,
+          "global_wape_accuracy": 5.424792108450561,
+          "accuracy_at_20": 12.76595744680851
+        },
+        "baseline_latest": {
+          "rows": 47,
+          "mean_station_accuracy": 72.61853376517729,
+          "global_wape": 0.220726504576896,
+          "global_wape_accuracy": 77.9273495423104,
+          "accuracy_at_20": 53.191489361702125
+        },
+        "baseline_lag96": {
+          "rows": 47,
+          "mean_station_accuracy": 31.09077451479728,
+          "global_wape": 1.2480222010520647,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 8.51063829787234
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T170000Z",
+      "data_cutoff": "2026-09-20 17:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 48,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.0013940376229584217,
+      "metrics": {
+        "k_replay": {
+          "rows": 48,
+          "mean_station_accuracy": 77.19818270597496,
+          "global_wape": 0.1761563042616982,
+          "global_wape_accuracy": 82.38436957383017,
+          "accuracy_at_20": 60.416666666666664
+        },
+        "k_seasonal_expert": {
+          "rows": 48,
+          "mean_station_accuracy": 46.197392077126466,
+          "global_wape": 0.5167105382179621,
+          "global_wape_accuracy": 48.32894617820379,
+          "accuracy_at_20": 16.666666666666664
+        },
+        "official_as_sent": {
+          "rows": 48,
+          "mean_station_accuracy": 31.524621392855547,
+          "global_wape": 0.8910496444189875,
+          "global_wape_accuracy": 10.895035558101252,
+          "accuracy_at_20": 12.5
+        },
+        "baseline_latest": {
+          "rows": 48,
+          "mean_station_accuracy": 72.52134241155885,
+          "global_wape": 0.21986721144024515,
+          "global_wape_accuracy": 78.01327885597549,
+          "accuracy_at_20": 47.91666666666667
+        },
+        "baseline_lag96": {
+          "rows": 48,
+          "mean_station_accuracy": 28.1515139410598,
+          "global_wape": 1.2411474293496765,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 10.416666666666668
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T180000Z",
+      "data_cutoff": "2026-09-20 18:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 47,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.0033410235773772,
+      "metrics": {
+        "k_replay": {
+          "rows": 47,
+          "mean_station_accuracy": 75.66137256943217,
+          "global_wape": 0.22793581797851642,
+          "global_wape_accuracy": 77.20641820214836,
+          "accuracy_at_20": 53.191489361702125
+        },
+        "k_seasonal_expert": {
+          "rows": 47,
+          "mean_station_accuracy": 45.147325202598495,
+          "global_wape": 0.5596489815941987,
+          "global_wape_accuracy": 44.035101840580126,
+          "accuracy_at_20": 25.53191489361702
+        },
+        "official_as_sent": {
+          "rows": 47,
+          "mean_station_accuracy": 42.409867980702714,
+          "global_wape": 0.7023517898832297,
+          "global_wape_accuracy": 29.764821011677036,
+          "accuracy_at_20": 25.53191489361702
+        },
+        "baseline_latest": {
+          "rows": 47,
+          "mean_station_accuracy": 69.84237236190887,
+          "global_wape": 0.28400777084280576,
+          "global_wape_accuracy": 71.59922291571942,
+          "accuracy_at_20": 46.808510638297875
+        },
+        "baseline_lag96": {
+          "rows": 47,
+          "mean_station_accuracy": 29.096854031705575,
+          "global_wape": 0.8951349563923449,
+          "global_wape_accuracy": 10.486504360765514,
+          "accuracy_at_20": 6.382978723404255
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T190000Z",
+      "data_cutoff": "2026-09-20 19:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 46,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.019803809002041817,
+      "metrics": {
+        "k_replay": {
+          "rows": 46,
+          "mean_station_accuracy": 74.15267168973445,
+          "global_wape": 0.19711691472746554,
+          "global_wape_accuracy": 80.28830852725345,
+          "accuracy_at_20": 50
+        },
+        "k_seasonal_expert": {
+          "rows": 46,
+          "mean_station_accuracy": 48.55057918311051,
+          "global_wape": 0.45212372559052777,
+          "global_wape_accuracy": 54.787627440947226,
+          "accuracy_at_20": 17.391304347826086
+        },
+        "official_as_sent": {
+          "rows": 46,
+          "mean_station_accuracy": 32.02453816212252,
+          "global_wape": 0.7567401082278595,
+          "global_wape_accuracy": 24.325989177214048,
+          "accuracy_at_20": 13.043478260869565
+        },
+        "baseline_latest": {
+          "rows": 46,
+          "mean_station_accuracy": 69.54071443790947,
+          "global_wape": 0.2395521750277754,
+          "global_wape_accuracy": 76.04478249722246,
+          "accuracy_at_20": 47.82608695652174
+        },
+        "baseline_lag96": {
+          "rows": 46,
+          "mean_station_accuracy": 26.529520133920958,
+          "global_wape": 0.926160157251517,
+          "global_wape_accuracy": 7.383984274848299,
+          "accuracy_at_20": 8.695652173913043
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T200000Z",
+      "data_cutoff": "2026-09-20 20:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 48,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.012427471578121185,
+      "metrics": {
+        "k_replay": {
+          "rows": 48,
+          "mean_station_accuracy": 77.80743082804567,
+          "global_wape": 0.1969921310492705,
+          "global_wape_accuracy": 80.30078689507295,
+          "accuracy_at_20": 60.416666666666664
+        },
+        "k_seasonal_expert": {
+          "rows": 48,
+          "mean_station_accuracy": 45.52987503589554,
+          "global_wape": 0.6216177586966247,
+          "global_wape_accuracy": 37.83822413033753,
+          "accuracy_at_20": 16.666666666666664
+        },
+        "official_as_sent": {
+          "rows": 48,
+          "mean_station_accuracy": 40.51551821305893,
+          "global_wape": 0.778211354499583,
+          "global_wape_accuracy": 22.1788645500417,
+          "accuracy_at_20": 16.666666666666664
+        },
+        "baseline_latest": {
+          "rows": 48,
+          "mean_station_accuracy": 74.75209088432045,
+          "global_wape": 0.20630658278348935,
+          "global_wape_accuracy": 79.36934172165107,
+          "accuracy_at_20": 50
+        },
+        "baseline_lag96": {
+          "rows": 48,
+          "mean_station_accuracy": 26.35173250750567,
+          "global_wape": 1.1710909927880926,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 4.166666666666666
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T210000Z",
+      "data_cutoff": "2026-09-20 21:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 48,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.005521696526557207,
+      "metrics": {
+        "k_replay": {
+          "rows": 48,
+          "mean_station_accuracy": 82.90257775879475,
+          "global_wape": 0.14916207063781453,
+          "global_wape_accuracy": 85.08379293621854,
+          "accuracy_at_20": 64.58333333333334
+        },
+        "k_seasonal_expert": {
+          "rows": 48,
+          "mean_station_accuracy": 48.832625612670995,
+          "global_wape": 0.42844232912481933,
+          "global_wape_accuracy": 57.15576708751806,
+          "accuracy_at_20": 25
+        },
+        "official_as_sent": {
+          "rows": 48,
+          "mean_station_accuracy": 29.385653649345787,
+          "global_wape": 0.80294333271919,
+          "global_wape_accuracy": 19.705666728080995,
+          "accuracy_at_20": 14.583333333333334
+        },
+        "baseline_latest": {
+          "rows": 48,
+          "mean_station_accuracy": 70.59260340724722,
+          "global_wape": 0.2469847122993009,
+          "global_wape_accuracy": 75.30152877006991,
+          "accuracy_at_20": 45.83333333333333
+        },
+        "baseline_lag96": {
+          "rows": 48,
+          "mean_station_accuracy": 20.187318216290677,
+          "global_wape": 1.1246446953983253,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 4.166666666666666
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T220000Z",
+      "data_cutoff": "2026-09-20 22:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 48,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.009369909763336182,
+      "metrics": {
+        "k_replay": {
+          "rows": 48,
+          "mean_station_accuracy": 83.12724542191832,
+          "global_wape": 0.15822775435546949,
+          "global_wape_accuracy": 84.17722456445304,
+          "accuracy_at_20": 66.66666666666666
+        },
+        "k_seasonal_expert": {
+          "rows": 48,
+          "mean_station_accuracy": 50.555316014932,
+          "global_wape": 0.41352698735257615,
+          "global_wape_accuracy": 58.64730126474238,
+          "accuracy_at_20": 27.083333333333332
+        },
+        "official_as_sent": {
+          "rows": 48,
+          "mean_station_accuracy": 24.979442512657176,
+          "global_wape": 0.8086823348973217,
+          "global_wape_accuracy": 19.131766510267834,
+          "accuracy_at_20": 10.416666666666668
+        },
+        "baseline_latest": {
+          "rows": 48,
+          "mean_station_accuracy": 74.99722465312077,
+          "global_wape": 0.19131380564827663,
+          "global_wape_accuracy": 80.86861943517233,
+          "accuracy_at_20": 54.166666666666664
+        },
+        "baseline_lag96": {
+          "rows": 48,
+          "mean_station_accuracy": 26.61540042881875,
+          "global_wape": 0.9027866331620598,
+          "global_wape_accuracy": 9.721336683794025,
+          "accuracy_at_20": 6.25
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260920T230000Z",
+      "data_cutoff": "2026-09-20 23:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 47,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.02707432396709919,
+      "metrics": {
+        "k_replay": {
+          "rows": 47,
+          "mean_station_accuracy": 74.25659191221172,
+          "global_wape": 0.23481938337004363,
+          "global_wape_accuracy": 76.51806166299563,
+          "accuracy_at_20": 53.191489361702125
+        },
+        "k_seasonal_expert": {
+          "rows": 47,
+          "mean_station_accuracy": 51.00603556212894,
+          "global_wape": 0.45828895905824024,
+          "global_wape_accuracy": 54.17110409417598,
+          "accuracy_at_20": 23.404255319148938
+        },
+        "official_as_sent": {
+          "rows": 47,
+          "mean_station_accuracy": 29.561456719505355,
+          "global_wape": 0.8102052275376931,
+          "global_wape_accuracy": 18.97947724623069,
+          "accuracy_at_20": 6.382978723404255
+        },
+        "baseline_latest": {
+          "rows": 47,
+          "mean_station_accuracy": 64.92923122753375,
+          "global_wape": 0.3125306723376411,
+          "global_wape_accuracy": 68.74693276623589,
+          "accuracy_at_20": 34.04255319148936
+        },
+        "baseline_lag96": {
+          "rows": 47,
+          "mean_station_accuracy": 22.922727875235143,
+          "global_wape": 0.896859152625552,
+          "global_wape_accuracy": 10.314084737444794,
+          "accuracy_at_20": 6.382978723404255
+        }
+      }
+    },
+    {
+      "cycle_id": "cyc_official-20260921_20260921T000000Z",
+      "data_cutoff": "2026-09-21 00:00:00+00:00",
+      "expected_rows": 48,
+      "revealed_rows": 45,
+      "refit_at": "2026-09-20T05:00:00Z",
+      "cache": "memory",
+      "train_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "current_data_sha256": "feb28b712bd1590f007ea389fc73b5775e8b490ccc40c22d52927e14024a8a2e",
+      "mean_seasonal_weight": 0.05897970497608185,
+      "metrics": {
+        "k_replay": {
+          "rows": 45,
+          "mean_station_accuracy": 78.33423321730987,
+          "global_wape": 0.2034120497484107,
+          "global_wape_accuracy": 79.65879502515894,
+          "accuracy_at_20": 60
+        },
+        "k_seasonal_expert": {
+          "rows": 45,
+          "mean_station_accuracy": 53.68214848680119,
+          "global_wape": 0.47102907062290095,
+          "global_wape_accuracy": 52.8970929377099,
+          "accuracy_at_20": 28.888888888888886
+        },
+        "official_as_sent": {
+          "rows": 45,
+          "mean_station_accuracy": 31.892041252903407,
+          "global_wape": 0.9370594446634839,
+          "global_wape_accuracy": 6.29405553365161,
+          "accuracy_at_20": 15.555555555555555
+        },
+        "baseline_latest": {
+          "rows": 45,
+          "mean_station_accuracy": 70.30998718779131,
+          "global_wape": 0.25421746367357956,
+          "global_wape_accuracy": 74.57825363264205,
+          "accuracy_at_20": 40
+        },
+        "baseline_lag96": {
+          "rows": 45,
+          "mean_station_accuracy": 29.87548457947821,
+          "global_wape": 1.3409060236627828,
+          "global_wape_accuracy": 0,
+          "accuracy_at_20": 13.333333333333334
+        }
+      }
+    }
+  ],
+  "station_metrics_recent6": [
+    {
+      "station_id": "02300",
+      "expected_rows": 24,
+      "revealed_rows": 24,
+      "k_replay": 81.9411278859133,
+      "k_seasonal_expert": 19.798250206136668,
+      "official_as_sent": 0,
+      "baseline_latest": 68.59005704971474,
+      "baseline_lag96": 0
+    },
+    {
+      "station_id": "03000",
+      "expected_rows": 24,
+      "revealed_rows": 24,
+      "k_replay": 86.97369600440913,
+      "k_seasonal_expert": 54.04545010843431,
+      "official_as_sent": 31.721335395769103,
+      "baseline_latest": 72.24470734744708,
+      "baseline_lag96": 21.692092154420916
+    },
+    {
+      "station_id": "05000",
+      "expected_rows": 24,
+      "revealed_rows": 23,
+      "k_replay": 76.55116295243141,
+      "k_seasonal_expert": 31.153229468961342,
+      "official_as_sent": 0,
+      "baseline_latest": 70.35584604212055,
+      "baseline_lag96": 0
+    },
+    {
+      "station_id": "05100",
+      "expected_rows": 24,
+      "revealed_rows": 23,
+      "k_replay": 80.53546856223865,
+      "k_seasonal_expert": 62.152950005414034,
+      "official_as_sent": 29.853366464370612,
+      "baseline_latest": 74.10031957760178,
+      "baseline_lag96": 27.171043490343195
+    },
+    {
+      "station_id": "06000",
+      "expected_rows": 24,
+      "revealed_rows": 24,
+      "k_replay": 79.45771205527248,
+      "k_seasonal_expert": 44.16388260562366,
+      "official_as_sent": 0,
+      "baseline_latest": 72.23155033181419,
+      "baseline_lag96": 0
+    },
+    {
+      "station_id": "06111",
+      "expected_rows": 24,
+      "revealed_rows": 24,
+      "k_replay": 81.62009286825717,
+      "k_seasonal_expert": 68.87148787264398,
+      "official_as_sent": 16.96625915104699,
+      "baseline_latest": 79.29544335649035,
+      "baseline_lag96": 24.59384059952957
+    },
+    {
+      "station_id": "07105",
+      "expected_rows": 24,
+      "revealed_rows": 23,
+      "k_replay": 88.7974844968692,
+      "k_seasonal_expert": 30.087183743371604,
+      "official_as_sent": 20.51267183257742,
+      "baseline_latest": 83.67380560131797,
+      "baseline_lag96": 0
+    },
+    {
+      "station_id": "07107",
+      "expected_rows": 24,
+      "revealed_rows": 23,
+      "k_replay": 78.90419098971029,
+      "k_seasonal_expert": 62.62934073676184,
+      "official_as_sent": 39.74407538348906,
+      "baseline_latest": 74.1850683491062,
+      "baseline_lag96": 32.89360481789504
+    },
+    {
+      "station_id": "07111",
+      "expected_rows": 24,
+      "revealed_rows": 24,
+      "k_replay": 83.60047679955593,
+      "k_seasonal_expert": 45.76848772032258,
+      "official_as_sent": 29.20178779969842,
+      "baseline_latest": 83.43620451404882,
+      "baseline_lag96": 0
+    },
+    {
+      "station_id": "09000",
+      "expected_rows": 24,
+      "revealed_rows": 23,
+      "k_replay": 74.04259410389938,
+      "k_seasonal_expert": 73.36781202631452,
+      "official_as_sent": 20.709161013074706,
+      "baseline_latest": 79.337139232477,
+      "baseline_lag96": 26.070409134157945
+    },
+    {
+      "station_id": "09122",
+      "expected_rows": 24,
+      "revealed_rows": 23,
+      "k_replay": 74.47899602831646,
+      "k_seasonal_expert": 0,
+      "official_as_sent": 0,
+      "baseline_latest": 74.86673247778874,
+      "baseline_lag96": 0
+    },
+    {
+      "station_id": "10009",
+      "expected_rows": 24,
+      "revealed_rows": 24,
+      "k_replay": 84.53158365154925,
+      "k_seasonal_expert": 60.37364611954308,
+      "official_as_sent": 17.808153251269122,
+      "baseline_latest": 70.04115947105701,
+      "baseline_lag96": 40.46764164988178
+    }
+  ],
+  "post_fix_official": {
+    "cycles": 1,
+    "expected_rows": 48,
+    "revealed_rows": 0,
+    "native_k_trace_rows": 48,
+    "metrics": {
+      "rows": 0,
+      "mean_station_accuracy": null,
+      "global_wape": null,
+      "global_wape_accuracy": null,
+      "accuracy_at_20": null
+    }
+  }
+}
