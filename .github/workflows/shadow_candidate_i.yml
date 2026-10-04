@@ -8,9 +8,6 @@ name: Shadow Candidate I
 # a cycle that already has 48 Candidate I predictions is skipped.
 # PULSO_API_KEY is intentionally not provided: this job cannot call the submission API.
 on:
-  schedule:
-    - cron: "27 * * * *"
-
   workflow_dispatch:
 
 concurrency:
