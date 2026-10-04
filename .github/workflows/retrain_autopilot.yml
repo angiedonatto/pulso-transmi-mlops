@@ -5,8 +5,6 @@ on:
     workflows: [Predict]
     types: [completed]
     branches: [student-work]
-  schedule:
-    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       threshold:
