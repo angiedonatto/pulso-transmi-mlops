@@ -22,7 +22,7 @@ PredictionReadiness = Literal["READY", "DEGRADED", "NOT_READY"]
 
 STATION_ID_RE = re.compile(r"^[0-9]{5}$")
 REQUIRED_FIELDS = ("station_id", "observed_at", "demand")
-OPTIONAL_KNOWN_FIELDS = {"released_at"}
+OPTIONAL_KNOWN_FIELDS = {"released_at", "schema_version", "measurement"}
 EXPECTED_FIELDS = set(REQUIRED_FIELDS) | OPTIONAL_KNOWN_FIELDS
 BOGOTA_TZ = ZoneInfo("America/Bogota")
 
@@ -162,7 +162,24 @@ class RuntimeDataValidator:
                 )
                 continue
 
-            missing = [field_name for field_name in REQUIRED_FIELDS if field_name not in raw_dict]
+            canonical = dict(raw_dict)
+            if "schema_version" in raw_dict:
+                measurement = raw_dict.get("measurement")
+                if type(raw_dict["schema_version"]) is not int or raw_dict["schema_version"] != 2:
+                    quarantined_indexes.add(index)
+                    events.append(_event("row", "quarantine", ("unsupported_schema_version",), raw_dict, None, {"row_index": index}, batch_hash, context.cursor, row_hash))
+                    continue
+                if not isinstance(measurement, dict) or measurement.get("unit") != "passengers" or measurement.get("quality") != "observed" or "value" not in measurement:
+                    quarantined_indexes.add(index)
+                    events.append(_event("row", "quarantine", ("invalid_measurement",), raw_dict, None, {"row_index": index}, batch_hash, context.cursor, row_hash))
+                    continue
+                if "demand" in raw_dict:
+                    quarantined_indexes.add(index)
+                    events.append(_event("row", "quarantine", ("ambiguous_demand_fields",), raw_dict, None, {"row_index": index}, batch_hash, context.cursor, row_hash))
+                    continue
+                canonical["demand"] = measurement["value"]
+
+            missing = [field_name for field_name in REQUIRED_FIELDS if field_name not in canonical]
             for field_name in missing:
                 missing_required_counts[field_name] += 1
             extra_fields.update(set(raw_dict) - EXPECTED_FIELDS)
@@ -176,7 +193,7 @@ class RuntimeDataValidator:
             row_events: list[RuntimeIngestionEvent] = []
             station_id = _normalize_station_id(raw_dict["station_id"], context.known_station_ids, row_events, raw_dict, batch_hash, context.cursor, row_hash, index)
             observed_at = _normalize_timestamp(raw_dict["observed_at"], row_events, raw_dict, batch_hash, context.cursor, row_hash, index)
-            demand = _normalize_demand(raw_dict["demand"], row_events, raw_dict, batch_hash, context.cursor, row_hash, index)
+            demand = _normalize_demand(canonical["demand"], row_events, raw_dict, batch_hash, context.cursor, row_hash, index)
             events.extend(row_events)
             if station_id is None or observed_at is None or demand is None:
                 quarantined_indexes.add(index)

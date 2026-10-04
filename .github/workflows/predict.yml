@@ -1,6 +1,11 @@
 name: Predict
 
 on:
+  push:
+    branches: [student-work]
+    paths:
+      - src/runtime_data_validation.py
+      - tests/test_stream_schema_v2.py
   schedule:
     - cron: "45,50 * * * *"
   workflow_dispatch:
