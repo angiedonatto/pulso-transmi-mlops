@@ -1,0 +1,35 @@
+name: Validate Candidate L
+on:
+  push:
+    branches: [student-work]
+    paths:
+      - src/candidate_l_runtime.py
+      - src/cycle_predictions.py
+      - tests/test_candidate_l_runtime.py
+      - scripts/check_candidate_l_runtime.py
+      - .github/workflows/validate_candidate_l.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      CANDIDATE_K_CACHE_DIR: .candidate_k_cache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[dev]' -r requirements/candidate-k-shadow.txt
+      - run: python -m pytest -q tests/test_candidate_l_runtime.py tests/test_candidate_l_spectral.py
+      - run: python scripts/check_candidate_l_runtime.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: candidate-l-readonly-validation
+          path: .candidate_l_refits/
+          include-hidden-files: true
