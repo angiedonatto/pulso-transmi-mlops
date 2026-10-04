@@ -11,9 +11,6 @@ name: Shadow Candidate K
 # only run inference. :55 is a few minutes after the Predict run that opens and submits each cycle
 # (cron 45,50); a delayed or failed run is caught up by the next one (the script is idempotent).
 on:
-  schedule:
-    - cron: "55 * * * *"
-
   workflow_dispatch:
     inputs:
       verify_parity:
