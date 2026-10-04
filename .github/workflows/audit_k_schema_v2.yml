@@ -1,0 +1,56 @@
+name: K Schema V2 Accuracy Audit
+
+on:
+  push:
+    branches: [student-work]
+    paths:
+      - scripts/audit_k_schema_v2_replay.py
+      - .github/workflows/audit_k_schema_v2.yml
+      - reports/k_schema_v2_replay/input_release_snapshot.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k-schema-v2-audit
+  cancel-in-progress: false
+
+jobs:
+  causal-read-only-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      CANDIDATE_K_CACHE_DIR: .candidate_k_cache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements/candidate-k-shadow.txt
+      - name: Install frozen K runtime and test dependencies
+        run: python -m pip install -e '.[dev]' -r requirements/candidate-k-shadow.txt
+      - name: Validate causality and missing truth handling
+        run: python -m pytest -q tests/test_k_schema_v2_replay.py
+      - name: Frozen K cache prefix
+        id: kspec
+        run: echo "key=candidate-k-v2_1-${{ hashFiles('artifacts/shadow/candidate_k_v2_1/metadata.json', 'src/candidate_k_deep.py', 'src/candidate_k_runtime.py') }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        with:
+          path: .candidate_k_cache
+          key: ${{ steps.kspec.outputs.key }}-audit-${{ github.run_id }}
+          restore-keys: ${{ steps.kspec.outputs.key }}-
+      - name: Replay revealed cycles without writes or submissions
+        run: python scripts/audit_k_schema_v2_replay.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k-schema-v2-accuracy-audit
+          path: reports/k_schema_v2_replay/output/
+          if-no-files-found: warn
+
