@@ -1,11 +1,6 @@
 name: Shadow Candidate J
 
 on:
-  workflow_run:
-    workflows: ["Predict"]
-    types: [completed]
-    branches: [student-work]
-
   workflow_dispatch:
 
 concurrency:
@@ -14,7 +9,6 @@ concurrency:
 
 jobs:
   shadow:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
