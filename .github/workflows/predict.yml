@@ -1,4 +1,5 @@
 name: Predict
+# Candidate L promoted 2026-10-04T17:13:50Z; preserve existing official receipts.
 
 on:
   push:
