@@ -1,4 +1,20 @@
-# Candidate L: frozen development result
+# Candidate L: release status
+
+Promoted at **2026-10-04 12:13:50 America/Bogota** (17:13:50 UTC), after explicit user approval and successful held-out evaluation, hosted read-only integration, general CI, and PyTorch CI.
+
+- Sole active model: `e2a9f1de-6718-423b-b259-7ab2f7258195` (`candidate_l_v1_recent_harmonic`).
+- K remains registered as the rollback model and execution-failure fallback.
+- Untouched-label holdout: **91.9613% L vs 85.2719% K**, 93/96 observable targets across two cycles. Not an official leaderboard result or guarantee.
+- Full PyTorch CI: **374 passed**. General CI: 360 passed, 3 skipped. Local subset: 103 passed. These counts overlap and must not be added together.
+- Hosted integration produced 48 exact targets without database writes or submissions.
+- Existing official receipts are preserved. The already-delivered 06:00 virtual cycle belongs to K; promotion does not replace it. L will serve the next eligible official cycle.
+- [Held-out evidence and release controls](holdout.md).
+- [Hosted runtime validation](https://github.com/angiedonatto/pulso-transmi-mlops/actions/runs/37219333159).
+- [Full PyTorch CI](https://github.com/angiedonatto/pulso-transmi-mlops/actions/runs/37219331725).
+
+The earlier access blocker was resolved by explicit user authorization. The following section preserves the **historical development-stage report**, before holdout validation and promotion; its earlier pending/blocker status is superseded by the release status above.
+
+## Historical development result
 
 Candidate L fits two harmonics per station to the latest 40 real post-change observations. Frequency and regression weights are re-estimated at each cutoff. It excludes unavailable observations using both observed_at and ingested_at, excludes missing labels, rejects stale history and records training hashes, coefficients and dates. K remains active; L is not connected to official submissions.
 
