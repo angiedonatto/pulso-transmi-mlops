@@ -82,10 +82,10 @@ def main():
         observations = store.table("observations", select=TABLE_SELECTS["observations"], order="observed_at.asc,station_id.asc")
         cycles = store.table("forecast_cycles", select="cycle_id,data_cutoff,closes_at,expected_predictions,first_seen_at", order="data_cutoff.desc", limit=4000)
         targets = store.table("forecast_cycle_targets", select=TABLE_SELECTS["forecast_cycle_targets"], order="target_at.desc,cycle_id.desc,target_order.asc", limit=15000)
-        predictions = store.table("predictions", select=TABLE_SELECTS["predictions"], order="created_at.desc", limit=15000)
+        predictions = store.table("predictions", select=TABLE_SELECTS["predictions"], order="created_at.desc,prediction_id.asc", limit=15000)
         models = store.table("model_versions", select=TABLE_SELECTS["model_versions"])
         receipts = store.table("submission_receipts", select=TABLE_SELECTS["submission_receipts"], order="created_at.desc", limit=4000)
-        traces = store.table("prediction_traces", select=TABLE_SELECTS["prediction_traces"], order="created_at.desc", limit=3000)
+        traces = store.table("prediction_traces", select=TABLE_SELECTS["prediction_traces"], order="created_at.desc,cycle_id.asc,model_id.asc,station_id.asc,target_at.asc", limit=3000)
 
     observations["observed_at"] = pd.to_datetime(observations.observed_at, utc=True)
     targets["target_at"] = pd.to_datetime(targets.target_at, utc=True)

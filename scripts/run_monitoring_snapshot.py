@@ -78,18 +78,18 @@ class SupabaseMonitoringStore:
             "observations": self.table("observations", select=TABLE_SELECTS["observations"], order="observed_at.desc,station_id.asc", limit=75000),
             # most recent rows: with a shadow model writing 48 rows per cycle too, an ascending
             # capped read would soon return only the oldest cycles
-            "predictions": self.table("predictions", select=TABLE_SELECTS["predictions"], order="created_at.desc", limit=10000),
+            "predictions": self.table("predictions", select=TABLE_SELECTS["predictions"], order="created_at.desc,prediction_id.asc", limit=10000),
             "submission_receipts": self.table("submission_receipts", select=TABLE_SELECTS["submission_receipts"], order="created_at.desc", limit=2000),
             "forecast_cycles": self.table("forecast_cycles", select=TABLE_SELECTS["forecast_cycles"], order="data_cutoff.desc", limit=2000),
             # The old ascending cap dropped the newest targets after 208 cycles, silently
             # freezing the accuracy window even while submissions and observations advanced.
             "forecast_cycle_targets": self.table("forecast_cycle_targets", select=TABLE_SELECTS["forecast_cycle_targets"], order="target_at.desc,cycle_id.desc,target_order.asc", limit=10000),
             "model_versions": self.table("model_versions", select=TABLE_SELECTS["model_versions"], order="trained_until.asc", limit=500),
-            "pipeline_runs": self.table("pipeline_runs", select=TABLE_SELECTS["pipeline_runs"], order="started_at.desc", limit=1000),
-            "data_quality_checks": self.table("data_quality_checks", select=TABLE_SELECTS["data_quality_checks"], order="checked_at.desc", limit=1000),
+            "pipeline_runs": self.table("pipeline_runs", select=TABLE_SELECTS["pipeline_runs"], order="started_at.desc,run_id.asc", limit=1000),
+            "data_quality_checks": self.table("data_quality_checks", select=TABLE_SELECTS["data_quality_checks"], order="checked_at.desc,check_id.asc", limit=1000),
             "stream_cursors": self.table("stream_cursors", select=TABLE_SELECTS["stream_cursors"], limit=100),
-            "runtime_ingestion_events": self.table("runtime_ingestion_events", select=TABLE_SELECTS["runtime_ingestion_events"], order="created_at.desc", limit=1000),
-            "prediction_traces": self.table("prediction_traces", select=TABLE_SELECTS["prediction_traces"], order="created_at.desc", limit=2000),
+            "runtime_ingestion_events": self.table("runtime_ingestion_events", select=TABLE_SELECTS["runtime_ingestion_events"], order="created_at.desc,event_id.asc", limit=1000),
+            "prediction_traces": self.table("prediction_traces", select=TABLE_SELECTS["prediction_traces"], order="created_at.desc,cycle_id.asc,model_id.asc,station_id.asc,target_at.asc", limit=2000),
         }
 
     def persist_snapshot(self, row: dict[str, Any]) -> None:
