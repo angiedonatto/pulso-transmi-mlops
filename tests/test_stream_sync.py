@@ -723,3 +723,16 @@ def test_confirm_cursor_refreshes_confirmed_at() -> None:
         store.confirm_cursor(stream_name="observations", cursor="c", rows_written=1, last_observed_at=slot(0), is_exhausted=True)
 
     assert b"confirmed_at" in captured["body"]
+
+
+def test_idempotent_backfilled_rows_advance_stale_observation_watermark() -> None:
+    store = HistoryStore(cursor="c1")
+    store.last_observed_at = slot(0)
+    store.rows[("03000", slot(4))] = ObservationRow("03000", slot(4), 120)
+    api = FakeApi({"c1": StreamPage([stream_row("03000", 4, 120)], None)})
+
+    result = sync_observation_stream(api, store, reconcile_lookback_hours=0)
+
+    assert result.written == 0
+    assert result.last_observed_at == slot(4)
+    assert store.last_observed_at == slot(4)

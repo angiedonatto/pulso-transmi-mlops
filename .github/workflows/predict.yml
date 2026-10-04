@@ -5,6 +5,8 @@ on:
     branches: [student-work]
     paths:
       - src/runtime_data_validation.py
+      - src/stream_sync.py
+      - tests/test_stream_sync.py
       - tests/test_stream_schema_v2.py
   schedule:
     - cron: "45,50 * * * *"

@@ -521,7 +521,9 @@ def sync_observation_stream(
 
         rows_to_write = getattr(validation, "rows_to_write", validation.valid_rows)
         rows_written = store.upsert_observations(rows_to_write)
-        page_last_observed_at = max([row.observed_at for row in rows_to_write] + ([last_observed_at] if last_observed_at else []), default=None)
+        # Identical rows may already have been recovered by reconciliation/backfill. They still
+        # establish the observed watermark even when the idempotent write set is empty.
+        page_last_observed_at = max([row.observed_at for row in validation.valid_rows] + ([last_observed_at] if last_observed_at else []), default=None)
         is_exhausted = page.next_cursor is None
         next_cursor = page.next_cursor if page.next_cursor is not None else cursor
         if page.next_cursor is not None and page.next_cursor in seen_cursors:
