@@ -19,6 +19,10 @@ The monitor's historical rolling accuracy remained around 86.68 because it could
 
 K remains the champion. Its native panel already forward-fills missing inputs causally and excludes missing target samples from training. Upcoming forecasts must be verified through receipt and K traces; recovery of future accuracy is not guaranteed until new targets resolve. Do not rewrite historical official predictions.
 
+## Monitor window correction
+
+The capped forecast_cycle_targets read was ordered ascending and stopped at 10,000 rows. With 10,992+ targets this excluded the newest cycles, independently freezing the monitor at older accuracy values. Capped operational tables now read most recent rows, including targets ordered by target_at descending. Metric/scoring definitions are unchanged. Monitoring, drift, stream and runtime suites passed 84 tests.
+
 ## Follow-up
 
 Five hourly checks were scheduled during the user's trip. Compare stream watermark to virtual forecast data_cutoff, not wall clock. Verify 48 exact-target submissions and nonzero K train_rows/nonnull seasonal_weight, then report measured accuracy with window and coverage. Promotion/rollback requires comparable causal evidence; ingestion should be repaired first.
