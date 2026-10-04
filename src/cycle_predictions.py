@@ -71,11 +71,15 @@ def generate_cycle_predictions(api: PulsoForecastCycleApi, store: PredictionStor
 
 def generate_predictions_for_cycle(cycle: ForecastCycle, store: PredictionStore, *, model: dict[str, Any] | None = None) -> CyclePredictionResult:
     model = model or store.load_active_champion()
-    artifact = _load_artifact(model)
+    candidate_l = model.get("model_type") == "adaptive_harmonic_candidate_l"
+    artifact = None if candidate_l else _load_artifact(model)
     observations = store.observations_until(cycle.data_cutoff)
     dependencies: list[tuple[dict[str, Any], list[CyclePrediction]]] = []
     candidate_k = _is_candidate_k_model(model)
-    if candidate_k:
+    if candidate_l:
+        from candidate_l_runtime import build_official_predictions
+        predictions, dependencies = build_official_predictions(cycle, model, observations, store)
+    elif candidate_k:
         predictions, dependencies = _build_candidate_k_official_predictions(cycle, model, artifact, observations, store)
     elif _is_candidate_j_model(model):
         predictions, dependency_model, dependency_predictions = _build_candidate_j_official_predictions(
@@ -88,7 +92,7 @@ def generate_predictions_for_cycle(cycle: ForecastCycle, store: PredictionStore,
     validate_predictions(cycle, predictions)
     store.persist_cycle_targets(cycle)
     for dependency_model, dependency_predictions in dependencies:
-        if not candidate_k:
+        if not (candidate_k or candidate_l):
             store.persist_predictions(cycle, dependency_model, dependency_predictions)
             continue
         try:  # K's dependencies keep J rollback-ready; a failed write must not cost K's submission
@@ -175,6 +179,15 @@ def validate_predictions(cycle: ForecastCycle, predictions: list[CyclePrediction
 
 
 class SupabaseCyclePredictionStore(SupabaseBaselineStore):
+    def persist_l_refit(self, model: dict[str, Any], manifest: dict[str, Any]) -> None:
+        config = dict(model.get("feature_config") or {})
+        config["latest_refit"] = manifest
+        response = self._client.patch(
+            "/model_versions", params={"model_id": f"eq.{model['model_id']}"},
+            json={"trained_until": model["trained_until"], "feature_config": config},
+        )
+        response.raise_for_status()
+
     def observations_until(self, data_cutoff: str) -> pd.DataFrame:
         frame = self.observations()
         parsed_cutoff = pd.Timestamp(data_cutoff).tz_convert("UTC")
@@ -816,6 +829,16 @@ def prediction_trace_payloads(predictions: list[CyclePrediction]) -> list[dict[s
     rows: list[dict[str, Any]] = []
     for prediction in predictions:
         trace = prediction.trace or {}
+        if trace.get("candidate") == "candidate_l_v1":
+            rows.append({
+                "cycle_id": prediction.cycle_id, "model_id": prediction.model_id,
+                "station_id": prediction.station_id, "target_at": prediction.target_at,
+                "horizon_minutes": prediction.horizon_minutes,
+                "base_prediction": prediction.prediction, "calibration_factor": 1.0,
+                "final_prediction": prediction.prediction,
+                "feedback_samples": trace["train_rows"], "data_cutoff": trace["data_cutoff"],
+            })
+            continue
         if trace.get("candidate") == CANDIDATE_K_TRACE:
             # same convention as the K shadow: base = seasonal expert (or J on fallback),
             # calibration_factor = gate weight on the seasonal expert, feedback_samples = refit samples
