@@ -8,6 +8,7 @@ on:
       - src/stream_sync.py
       - tests/test_stream_sync.py
       - tests/test_stream_schema_v2.py
+      - .github/workflows/predict.yml
   schedule:
     - cron: "45,50 * * * *"
   workflow_dispatch:
@@ -58,7 +59,7 @@ jobs:
           k_active = "true"
           try:
               with SupabaseBaselineStore() as store:
-                  k_active = "true" if store.load_active_champion().get("model_type") == MODEL_TYPE else "false"
+                  k_active = "true" if store.load_active_champion().get("model_type") in (MODEL_TYPE, "adaptive_harmonic_candidate_l") else "false"
           except Exception as exc:  # noqa: BLE001
               print(f"::warning title=Champion lookup failed::{type(exc).__name__}: {exc}")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
@@ -114,3 +115,12 @@ jobs:
 
       - name: Generate monitoring snapshot
         run: python scripts/run_monitoring_snapshot.py
+
+      - name: Save Candidate L per-cycle training evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-l-refits-${{ github.run_id }}
+          path: .candidate_l_refits/
+          include-hidden-files: true
+          if-no-files-found: ignore
