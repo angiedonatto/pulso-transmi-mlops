@@ -1,0 +1,248 @@
+{
+  "data": "Controlled synthetic fixtures; not production data",
+  "viewports_and_routes": [
+    {
+      "width": 320,
+      "route": "/",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 320,
+      "route": "/accuracy",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 320,
+      "route": "/models",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 320,
+      "route": "/drift",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 320,
+      "route": "/cycles",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 320,
+      "route": "/data",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 320,
+      "route": "/operations",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 320,
+      "route": "/experiments",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 390,
+      "route": "/",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 390,
+      "route": "/accuracy",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 390,
+      "route": "/models",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 390,
+      "route": "/drift",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 390,
+      "route": "/cycles",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 390,
+      "route": "/data",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 390,
+      "route": "/operations",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 390,
+      "route": "/experiments",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 768,
+      "route": "/",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 768,
+      "route": "/accuracy",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 768,
+      "route": "/models",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 768,
+      "route": "/drift",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 768,
+      "route": "/cycles",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 768,
+      "route": "/data",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 768,
+      "route": "/operations",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 768,
+      "route": "/experiments",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1024,
+      "route": "/",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1024,
+      "route": "/accuracy",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1024,
+      "route": "/models",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1024,
+      "route": "/drift",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1024,
+      "route": "/cycles",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1024,
+      "route": "/data",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1024,
+      "route": "/operations",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1024,
+      "route": "/experiments",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1440,
+      "route": "/",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1440,
+      "route": "/accuracy",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1440,
+      "route": "/models",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1440,
+      "route": "/drift",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1440,
+      "route": "/cycles",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1440,
+      "route": "/data",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1440,
+      "route": "/operations",
+      "http_status": 200,
+      "page_overflow": false
+    },
+    {
+      "width": 1440,
+      "route": "/experiments",
+      "http_status": 200,
+      "page_overflow": false
+    }
+  ],
+  "browser_errors": [],
+  "filters_and_pipeline_details": "passed",
+  "reduced_motion": "passed"
+}

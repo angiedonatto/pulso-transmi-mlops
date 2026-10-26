@@ -4,7 +4,7 @@ import { isRecord } from "@/lib/snapshot";
 
 export type PerformancePoint = {
   cycle_id: string; accepted_at: string | null; accuracy: number | null;
-  rolling6_accuracy: number | null; mae: number | null; bias_pct: number | null;
+  rolling6_accuracy: number | null; rolling12_accuracy: number | null; mae: number | null; bias_pct: number | null;
   prediction_count: number | null; resolved_targets: number | null; expected_predictions: number | null;
 };
 export type GroupMetric = {
@@ -25,7 +25,7 @@ export async function getPerformanceOverview() {
   const history: PerformancePoint[] = rows(performance.cycle_accuracy).map((row) => ({
     cycle_id: String(row.cycle_id), accepted_at: typeof row.accepted_at === "string" ? row.accepted_at : null,
     accuracy: number(row.mean_station_accuracy ?? row.cycle_accuracy),
-    rolling6_accuracy: number(row.rolling6_accuracy),
+    rolling6_accuracy: number(row.rolling6_accuracy), rolling12_accuracy: number(row.rolling12_accuracy),
     mae: number(row.mae), bias_pct: null,
     prediction_count: number(row.count), resolved_targets: number(row.resolved_targets),
     expected_predictions: number(row.expected_predictions),

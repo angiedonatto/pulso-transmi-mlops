@@ -96,3 +96,30 @@ controladas no sustituyen la comprobación de producción.
 Las cifras y el snapshot de octubre proporcionados en la solicitud son
 referencias históricas, no mediciones de esta ejecución, y no se hardcodean en
 la aplicación. MLflow y el pipeline productivo permanecen intactos.
+
+## Experiencia analítica 2.0
+
+La portada separa arquitectura, cobertura operacional, accuracy y hallazgos de
+monitoreo. `/experiments` presenta evidencia histórica bajo cinco protocolos
+separados. El inventario de 16 experimentos y 108 runs describe el tracking
+histórico, nunca indicadores actuales. Los reportes se exportan desde un
+checkout completo con `node dashboard/scripts/build-experiment-evidence.mjs`;
+Vercel recibe solo `dashboard/data/experiments.json`, sin acceso a MLflow ni a
+archivos fuera del Root Directory. Las pruebas verifican los hashes originales.
+
+Los controles de periodo, series, estaciones, horizontes y protocolos modifican
+las visualizaciones. Las ventanas 6/12 vienen del reporte, sin recálculo del
+scoring. El detalle de arquitectura explica las etapas; no simula actividad en
+vivo. Las capas 3D CSS solo afectan iconos, se aplanan en móvil y con movimiento
+reducido. Las tablas secundarias tienen scroll interno y foco de teclado.
+
+Capturas `dashboard/evidence/*-synthetic.png`: evidencia local con fixtures
+sintéticos, no datos productivos. La auditoría visual revisa ocho rutas en 320,
+390, 768, 1024 y 1440 px; `responsive-audit.json` conserva el resultado.
+
+Auditoría visual local (nunca usa producción): después de `npm run build`,
+arrancar `node scripts/visual-fixture.mjs` desde `dashboard/`. En otro terminal,
+con Playwright y Chromium instalados, ejecutar
+`python scripts/audit-responsive.py`. El servidor de fixtures usa el puerto
+3102; detenerlo con Ctrl-C al terminar. Los efectos 3D no utilizan WebGL ni
+librerías adicionales y se desactivan con `prefers-reduced-motion`.

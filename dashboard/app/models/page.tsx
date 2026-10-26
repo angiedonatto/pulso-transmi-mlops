@@ -210,7 +210,7 @@ function ModelCard({
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap gap-1.5">{badges}</div>
-          <h3 className="mt-3 truncate text-xl font-semibold text-white" title={model.model_name}>
+          <h3 className="mt-3 break-words text-xl font-semibold text-white" title={model.model_name}>
             {model.model_name}
           </h3>
           <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
@@ -476,7 +476,7 @@ function Field({ label, value, display, mono = false, wide = false }: { label: s
   return (
     <div className={`min-w-0 ${wide ? "sm:col-span-2" : ""}`}>
       <dt className="text-[11px] uppercase tracking-[0.14em] text-slate-500">{label}</dt>
-      <dd className={`mt-1 truncate text-slate-100 ${mono ? "font-mono text-[13px]" : "text-sm"}`} title={value}>
+      <dd className={`mt-1 break-words text-slate-100 ${mono ? "font-mono text-[13px]" : "text-sm"}`} title={value}>
         {display ?? value}
       </dd>
     </div>

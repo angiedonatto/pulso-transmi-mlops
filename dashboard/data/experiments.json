@@ -1,0 +1,437 @@
+{
+  "notice": "Evidencia histórica versionada. No son métricas actuales ni entrenamientos nuevos. Comparar únicamente dentro de cada protocolo. WAPE de K es global; el de AB es medio por estación.",
+  "tracking": {
+    "experiments": 16,
+    "runs": 108
+  },
+  "sources": {
+    "reports/model_improvement/summary.json": "9fa0b6d01f8233b5a486e5fb191b8bf404c8dcf5992beebeb78530229a0d7214",
+    "reports/candidate_c/summary.json": "604ae151e5f8038394cc10fa5c537407840701ea8c60f13e0fee70b67dde8c2b",
+    "reports/candidate_d1/summary.json": "c1fe1834b550a00c31e47c7695a1ea18615336087992830c6c02f1cb1c9037ca",
+    "reports/candidate_k/summary.json": "a1f2318dd792392ef64fb0acb71e4d770de58c24094a27dca69d5a81028d081b",
+    "evidence/mlflow-validation.json": "90f46736fc7b04e976d063d24356a77b1510e856eaf37f87054b88a5eb1091bc"
+  },
+  "groups": [
+    {
+      "name": "A / B · validación temporal",
+      "protocol": "2026-09-02T04:45:00Z → 2026-09-09T03:45:00Z",
+      "source": "reports/model_improvement/summary.json",
+      "rows": [
+        {
+          "model": "champion actual",
+          "accuracy": 77.87955334784301,
+          "wape": 0.2212044665215699
+        },
+        {
+          "model": "candidate A",
+          "accuracy": 82.69209635098183,
+          "wape": 0.17307903649018166
+        },
+        {
+          "model": "candidate B",
+          "accuracy": 87.4785552201394,
+          "wape": 0.12521444779860605
+        }
+      ]
+    },
+    {
+      "name": "C · selección walk-forward",
+      "protocol": "2026-09-03T16:00:00Z → 2026-09-10T15:00:00Z. Scores de selección, no holdout.",
+      "source": "reports/candidate_c/summary.json",
+      "rows": [
+        {
+          "model": "candidate C global / 1",
+          "accuracy": 86.79308593048007,
+          "params": {
+            "loss": "absolute_error",
+            "learning_rate": 0.06,
+            "max_iter": 120,
+            "max_leaf_nodes": 31,
+            "min_samples_leaf": 20,
+            "l2_regularization": 0.05,
+            "random_state": 17
+          }
+        },
+        {
+          "model": "candidate C global / 2",
+          "accuracy": 86.49296706519335,
+          "params": {
+            "loss": "absolute_error",
+            "learning_rate": 0.05,
+            "max_iter": 140,
+            "max_leaf_nodes": 15,
+            "min_samples_leaf": 30,
+            "l2_regularization": 0.1,
+            "random_state": 17
+          }
+        },
+        {
+          "model": "candidate C global / 3",
+          "accuracy": 86.84338709040765,
+          "params": {
+            "loss": "absolute_error",
+            "learning_rate": 0.08,
+            "max_iter": 100,
+            "max_leaf_nodes": 31,
+            "min_samples_leaf": 35,
+            "l2_regularization": 0.1,
+            "random_state": 17
+          }
+        },
+        {
+          "model": "candidate C híbrido por estación / hist_gradient_boosting",
+          "accuracy": 86.99899815833639,
+          "params": {
+            "station_estimator": "hist_gradient_boosting",
+            "global_params": {
+              "loss": "absolute_error",
+              "learning_rate": 0.08,
+              "max_iter": 100,
+              "max_leaf_nodes": 31,
+              "min_samples_leaf": 35,
+              "l2_regularization": 0.1,
+              "random_state": 17
+            }
+          }
+        },
+        {
+          "model": "candidate C híbrido por estación / extra_trees",
+          "accuracy": 87.10953296491645,
+          "params": {
+            "station_estimator": "extra_trees",
+            "global_params": {
+              "loss": "absolute_error",
+              "learning_rate": 0.08,
+              "max_iter": 100,
+              "max_leaf_nodes": 31,
+              "min_samples_leaf": 35,
+              "l2_regularization": 0.1,
+              "random_state": 17
+            }
+          }
+        },
+        {
+          "model": "candidate C híbrido por estación / random_forest",
+          "accuracy": 87.00232942540542,
+          "params": {
+            "station_estimator": "random_forest",
+            "global_params": {
+              "loss": "absolute_error",
+              "learning_rate": 0.08,
+              "max_iter": 100,
+              "max_leaf_nodes": 31,
+              "min_samples_leaf": 35,
+              "l2_regularization": 0.1,
+              "random_state": 17
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "D1 · walk-forward",
+      "protocol": "2026-09-01T04:00:00Z → 2026-09-08T03:00:00Z",
+      "source": "reports/candidate_d1/summary.json",
+      "rows": [
+        {
+          "model": "Candidate B v2",
+          "accuracy": 87.27982423666414,
+          "wape": 0.12582255361355096,
+          "mae": 45.4760374389882,
+          "bias": -9.593649999911012
+        },
+        {
+          "model": "Candidate D1 ridge raw",
+          "accuracy": 87.0982556361829,
+          "wape": 0.12737162542869554,
+          "mae": 46.035918365245365,
+          "bias": -5.141417775878278
+        },
+        {
+          "model": "Candidate D1 ridge clipped",
+          "accuracy": 87.0982556361829,
+          "wape": 0.12737162542869554,
+          "mae": 46.035918365245365,
+          "bias": -5.141417775878278
+        },
+        {
+          "model": "Candidate D1 hgb raw",
+          "accuracy": 87.33247214275173,
+          "wape": 0.12541402125681964,
+          "mae": 45.32838161563865,
+          "bias": -8.521832488056065
+        },
+        {
+          "model": "Candidate D1 hgb clipped",
+          "accuracy": 87.33247214275173,
+          "wape": 0.12541402125681964,
+          "mae": 45.32838161563865,
+          "bias": -8.521832488056065
+        },
+        {
+          "model": "Candidate D1 extra trees clipped",
+          "accuracy": 87.24625834494765,
+          "wape": 0.12632679189308793,
+          "mae": 45.658284247845884,
+          "bias": -3.978839923438785
+        }
+      ]
+    },
+    {
+      "name": "D1 · hard holdout",
+      "protocol": "2026-09-08T04:00:00Z → 2026-09-09T03:00:00Z",
+      "source": "reports/candidate_d1/summary.json",
+      "rows": [
+        {
+          "model": "Candidate B v2",
+          "accuracy": 88.4627910059345,
+          "wape": 0.11505680701838511,
+          "mae": 45.050832365430516,
+          "bias": -11.917012746370794
+        },
+        {
+          "model": "Candidate D1 ridge raw",
+          "accuracy": 88.28340673224278,
+          "wape": 0.1171591086117921,
+          "mae": 45.87399475903859,
+          "bias": -5.829526687234905
+        },
+        {
+          "model": "Candidate D1 ridge clipped",
+          "accuracy": 88.28340673224278,
+          "wape": 0.1171591086117921,
+          "mae": 45.87399475903859,
+          "bias": -5.829526687234905
+        },
+        {
+          "model": "Candidate D1 hgb raw",
+          "accuracy": 88.55453141162808,
+          "wape": 0.11396678292900587,
+          "mae": 44.62403021614909,
+          "bias": -10.781101111929171
+        },
+        {
+          "model": "Candidate D1 hgb clipped",
+          "accuracy": 88.55453141162808,
+          "wape": 0.11396678292900587,
+          "mae": 44.62403021614909,
+          "bias": -10.781101111929171
+        },
+        {
+          "model": "Candidate D1 extra trees clipped",
+          "accuracy": 88.38301044464174,
+          "wape": 0.11526522153962389,
+          "mae": 45.132437686333866,
+          "bias": -7.0857175908569054
+        }
+      ]
+    },
+    {
+      "name": "K · backtest retrospectivo / all_cycles",
+      "protocol": "Diseño adaptado a la ventana. Comparador J: replay y predicciones oficiales. No es holdout ciego de K.",
+      "source": "reports/candidate_k/summary.json",
+      "rows": [
+        {
+          "model": "G",
+          "accuracy": 81.976444578667,
+          "wape": 0.18715495130762735,
+          "mae": 73.07374408882609,
+          "bias": -5.745966236789237,
+          "params": null
+        },
+        {
+          "model": "J",
+          "accuracy": 83.22821490091802,
+          "wape": 0.17327496231488734,
+          "mae": 67.65436962651728,
+          "bias": 1.1509960636764813,
+          "params": null
+        },
+        {
+          "model": "k_staged_re",
+          "accuracy": 84.6175258528328,
+          "wape": 0.15544020264414105,
+          "mae": 60.69087411138303,
+          "bias": 8.60038957134789,
+          "params": {
+            "architecture": "staged_re",
+            "lookback": 48,
+            "horizons": 4,
+            "profile_days": 7,
+            "baseline_weeks": 4,
+            "scale_window": 672,
+            "hidden": 128,
+            "blocks": 2,
+            "dropout": 0.1,
+            "station_embedding": 4,
+            "epochs": 10,
+            "batch_size": 1024,
+            "lr": 0.002,
+            "weight_decay": 0.0001,
+            "augmentation_prob": 0.5,
+            "min_onset": 4,
+            "period_slots": [
+              4,
+              64
+            ],
+            "level_factor": [
+              0.2,
+              5
+            ],
+            "seeds": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        },
+        {
+          "model": "k_staged",
+          "accuracy": 84.15144544911419,
+          "wape": 0.15969603483499392,
+          "mae": 62.35254317344378,
+          "bias": 7.527402811746988,
+          "params": {
+            "architecture": "staged",
+            "lookback": 48,
+            "horizons": 4,
+            "profile_days": 7,
+            "baseline_weeks": 4,
+            "scale_window": 672,
+            "hidden": 128,
+            "blocks": 2,
+            "dropout": 0.1,
+            "station_embedding": 4,
+            "epochs": 10,
+            "batch_size": 1024,
+            "lr": 0.002,
+            "weight_decay": 0.0001,
+            "augmentation_prob": 0.5,
+            "min_onset": 4,
+            "period_slots": [
+              4,
+              64
+            ],
+            "level_factor": [
+              0.2,
+              5
+            ],
+            "seeds": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        },
+        {
+          "model": "k_gated_aug",
+          "accuracy": 83.60937727797922,
+          "wape": 0.16641483896569892,
+          "mae": 64.97586769785391,
+          "bias": 6.572166065449298,
+          "params": {
+            "architecture": "gated",
+            "lookback": 48,
+            "horizons": 4,
+            "profile_days": 7,
+            "baseline_weeks": 4,
+            "scale_window": 672,
+            "hidden": 128,
+            "blocks": 2,
+            "dropout": 0.1,
+            "station_embedding": 4,
+            "epochs": 10,
+            "batch_size": 1024,
+            "lr": 0.002,
+            "weight_decay": 0.0001,
+            "augmentation_prob": 0.5,
+            "min_onset": 4,
+            "period_slots": [
+              4,
+              64
+            ],
+            "level_factor": [
+              0.2,
+              5
+            ],
+            "seeds": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        },
+        {
+          "model": "k_tide_aug",
+          "accuracy": 82.3814876885006,
+          "wape": 0.17902369594109516,
+          "mae": 69.89893482183422,
+          "bias": 6.373782548867344,
+          "params": {
+            "architecture": "tide",
+            "lookback": 48,
+            "horizons": 4,
+            "profile_days": 7,
+            "baseline_weeks": 4,
+            "scale_window": 672,
+            "hidden": 128,
+            "blocks": 2,
+            "dropout": 0.1,
+            "station_embedding": 4,
+            "epochs": 10,
+            "batch_size": 1024,
+            "lr": 0.002,
+            "weight_decay": 0.0001,
+            "augmentation_prob": 0.5,
+            "min_onset": 4,
+            "period_slots": [
+              4,
+              64
+            ],
+            "level_factor": [
+              0.2,
+              5
+            ],
+            "seeds": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        },
+        {
+          "model": "k_local_zero_shot",
+          "accuracy": 75.67825220447686,
+          "wape": 0.2418439121063565,
+          "mae": 94.42678389871814,
+          "bias": 3.167831987232329,
+          "params": null
+        },
+        {
+          "model": "k_staged_re_j",
+          "accuracy": 84.59900111105897,
+          "wape": 0.15642868705637852,
+          "mae": 61.0768230615495,
+          "bias": 0.7912211306871315,
+          "params": null
+        },
+        {
+          "model": "k_staged_j",
+          "accuracy": 84.15823256282108,
+          "wape": 0.16039607087071478,
+          "mae": 62.625868852352156,
+          "bias": 0.1978542420442481,
+          "params": null
+        }
+      ]
+    }
+  ]
+}

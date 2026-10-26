@@ -1,4 +1,5 @@
 import { DataUnavailable } from "@/components/data-unavailable";
+import { AlertChart } from "@/components/analytics";
 import { RadioTower, RefreshCw, SignalHigh } from "lucide-react";
 import { DataTable } from "@/components/data-table";
 import { MetricCard } from "@/components/metric-card";
@@ -16,6 +17,7 @@ export default async function DriftPage() {
 
   return (
     <div className="space-y-5">
+      <AlertChart alerts={snapshot.report.alerts} />
       <section className="grid gap-3 md:grid-cols-3">
         <MetricCard icon={RadioTower} label="Drift general" value={drift.status} status={drift.status} detail={drift.reasons.join(" · ") || "Sin razones de drift"} />
         <MetricCard icon={SignalHigh} label="Data drift" value={text(dataDrift.status, "UNKNOWN")} status={text(dataDrift.status, "UNKNOWN")} detail="PSI, KS y checks de distribución desde drift_monitor.py" />

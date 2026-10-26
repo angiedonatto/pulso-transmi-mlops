@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const fixture = JSON.parse(await readFile(new URL('./fixtures/canonical-snapshot.json', import.meta.url)));
 const KEY = 'controlled-test-service-key-not-a-credential';
-const routes = ['/', '/models', '/accuracy', '/drift', '/cycles', '/data', '/operations'];
+const routes = ['/', '/models', '/accuracy', '/drift', '/cycles', '/data', '/operations', '/experiments'];
 
 async function freePort() {
   const server = http.createServer();
@@ -99,7 +99,7 @@ test('production Next routes use real query paths with controlled fixtures', { t
   const app = await startApp({ SUPABASE_URL: `http://127.0.0.1:${mock.address().port}`, SUPABASE_SERVICE_ROLE_KEY: KEY });
   t.after(app.stop);
 
-  await t.test('all seven routes render; L, canonical accuracy and historical warnings are visible', async () => {
+  await t.test('all eight routes render; L, canonical accuracy and historical warnings are visible', async () => {
     for (const route of routes) {
       const content = await html(app, route);
       assert.match(content, /Datos desactualizados/);

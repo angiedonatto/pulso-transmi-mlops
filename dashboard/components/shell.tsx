@@ -14,6 +14,7 @@ const nav = [
   { href: "/accuracy", label: "Accuracy", icon: BarChart3 },
   { href: "/drift", label: "Drift", icon: RadioTower },
   { href: "/data", label: "Datos", icon: Database },
+  { href: "/experiments", label: "Experimentación", icon: GitBranch },
   { href: "/models", label: "Modelos", icon: Boxes },
   { href: "/operations", label: "Operaciones", icon: ServerCog },
 ];
@@ -23,7 +24,7 @@ export function Shell({ children, monitoring, stale }: { children: React.ReactNo
   const router = useRouter();
   const snapshot = monitoring.snapshot;
   const shellStatus = snapshot?.overall_status ?? "UNKNOWN";
-  const driftStatus = snapshot?.drift_status ?? "UNKNOWN";
+
   const sourceLabel = snapshot ? "Supabase · histórico" : "sin datos";
   useEffect(() => {
     const configured = Number(process.env.NEXT_PUBLIC_DASHBOARD_REFRESH_SECONDS || 60);
@@ -69,11 +70,11 @@ export function Shell({ children, monitoring, stale }: { children: React.ReactNo
               <Activity className="size-3.5" />
               Observabilidad operativa
             </div>
-            <h1 className="mt-2 text-2xl font-semibold text-white md:text-3xl">Centro de control MLOps</h1>
+            <h1 className="mt-2 text-2xl font-semibold text-white md:text-3xl">Plataforma MLOps</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill status={shellStatus} />
-            <StatusPill status={driftStatus} />
+            <span className="caption">Lectura de snapshots · solo consulta</span>
+
           </div>
         </header>
         <nav aria-label="Navegación móvil" className="mb-4 flex flex-wrap gap-3 text-sm text-cyan-100 lg:hidden">
@@ -82,7 +83,7 @@ export function Shell({ children, monitoring, stale }: { children: React.ReactNo
         <section role="status" className="mb-5 rounded-lg border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm text-slate-300">
           {snapshot ? <>
             <p className="font-semibold text-amber-100">{stale ? "Datos desactualizados" : "Snapshot histórico"} · no representa tiempo real</p>
-            <p className="mt-1">Snapshot generado: {utcTimestamp(snapshot.generated_at)}. Los estados, métricas y alertas corresponden a ese momento.</p>
+            <p className="mt-1">Snapshot generado: {utcTimestamp(snapshot.generated_at)}. {pathname === "/experiments" ? "Esta fecha corresponde al monitoreo operacional. Cada experimento conserva su propio periodo de evaluación." : "Los estados, métricas y alertas corresponden a ese momento."}</p>
           </> : <p>{monitoring.message}</p>}
           <button onClick={() => router.refresh()} className="mt-2 text-cyan-100 underline">Volver a consultar</button>
         </section>
