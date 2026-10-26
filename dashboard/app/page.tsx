@@ -1,3 +1,4 @@
+import { DataUnavailable } from "@/components/data-unavailable";
 import { AlertTriangle, BrainCircuit, CheckCircle2, Gauge, RadioTower, Send, ServerCog } from "lucide-react";
 import { MetricCard } from "@/components/metric-card";
 import { StatusPill } from "@/components/status-pill";
@@ -6,7 +7,9 @@ import { getMonitoringSnapshot } from "@/lib/monitoring";
 import { numberValue, pct, shortDate, text } from "@/lib/format";
 
 export default async function OverviewPage() {
-  const snapshot = await getMonitoringSnapshot();
+  const result = await getMonitoringSnapshot();
+  if (!result.snapshot) return <DataUnavailable message={result.message} />;
+  const snapshot = result.snapshot;
   const { report } = snapshot;
   const perf = report.drift.performance;
   const cycle = report.current_cycle;
@@ -16,8 +19,8 @@ export default async function OverviewPage() {
   return (
     <div className="space-y-6">
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={Gauge} label="Estado del sistema" value={snapshot.overall_status} status={snapshot.overall_status} detail={`${report.alerts.length} alertas activas`} />
-        <MetricCard icon={BrainCircuit} label="Champion activo" value={text(model?.model_name, "Sin champion")} detail={text(model?.model_type)} status={model ? "HEALTHY" : "FAILED"} />
+        <MetricCard icon={Gauge} label="Estado del sistema" value={snapshot.overall_status} status={snapshot.overall_status} detail={`${report.alerts.length} alertas del snapshot`} />
+        <MetricCard icon={BrainCircuit} label="Modelo del snapshot" value={text(model?.model_name, "Sin champion")} detail={text(model?.model_type)} status={model ? "HEALTHY" : "FAILED"} />
         <MetricCard icon={CheckCircle2} label="Última accuracy resuelta" value={pct(perf.recent_accuracy)} detail={`Rolling 6: ${pct(perf.recent6_accuracy)} · Rolling 12: ${pct(perf.recent12_accuracy)}`} status={perf.status || "UNKNOWN"} />
         <MetricCard icon={RadioTower} label="Estado de drift" value={snapshot.drift_status} status={snapshot.drift_status} detail={snapshot.retrain_recommended ? "Retrain recomendado" : "Retrain no recomendado"} />
       </section>
@@ -26,7 +29,7 @@ export default async function OverviewPage() {
         <div className="rounded-lg border border-white/10 bg-[#10151d]/88 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100">Ciclo actual</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100">Último ciclo del snapshot</p>
               <h2 className="mt-2 text-xl font-semibold text-white">{text(cycle.cycle_id, "Sin ciclo activo")}</h2>
               <p className="mt-1 text-sm text-slate-400">Corte de datos {shortDate(cycle.data_cutoff)} · cierra {shortDate(cycle.closes_at)}</p>
             </div>
@@ -72,7 +75,7 @@ export default async function OverviewPage() {
                 <p className="mt-1 text-sm text-slate-400">{alert.explanation}</p>
                 <p className="mt-2 text-xs uppercase tracking-[0.12em] text-slate-500">{alert.category} · {text(alert.entity)}</p>
               </div>
-            )) : <p className="text-sm text-slate-400">No hay alertas activas.</p>}
+            )) : <p className="text-sm text-slate-400">No hay alertas del snapshot.</p>}
           </div>
         </div>
 

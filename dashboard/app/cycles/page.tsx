@@ -1,10 +1,13 @@
+import { DataUnavailable } from "@/components/data-unavailable";
 import { DataTable } from "@/components/data-table";
 import { StatusPill } from "@/components/status-pill";
 import { getMonitoringSnapshot } from "@/lib/monitoring";
 import { numberValue, shortDate, text } from "@/lib/format";
 
 export default async function CyclesPage() {
-  const snapshot = await getMonitoringSnapshot();
+  const result = await getMonitoringSnapshot();
+  if (!result.snapshot) return <DataUnavailable message={result.message} />;
+  const snapshot = result.snapshot;
   const cycle = snapshot.report.current_cycle;
   const rows = [
     {

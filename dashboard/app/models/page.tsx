@@ -18,6 +18,15 @@ const CHAMPION_PARAMS: ParamSpec[] = [
   { label: "Clip", source: "params", paths: ["clip", "adaptive_layer.clip"] },
 ];
 
+const L_PARAMS: ParamSpec[] = [
+  { label: "Ventana reciente", source: "params", paths: ["window", "config.window"] },
+  { label: "Mínimo de filas", source: "params", paths: ["min_rows", "config.min_rows"] },
+  { label: "Armónicos", source: "params", paths: ["harmonics", "config.harmonics"] },
+  { label: "Ridge", source: "params", paths: ["ridge", "config.ridge"] },
+  { label: "Periodo mínimo", source: "params", paths: ["period_min", "config.period_min"] },
+  { label: "Periodo máximo", source: "params", paths: ["period_max", "config.period_max"] },
+];
+
 const SHADOW_PARAMS: ParamSpec[] = [
   { label: "Base model", source: "feature_config", paths: ["base_model.name"] },
   { label: "Level window", source: "params", paths: ["adaptive_layer.level_window", "level_window"] },
@@ -68,7 +77,7 @@ export default async function ModelsPage() {
 }
 
 function PageHeader({ data }: { data: ModelsOverview }) {
-  const live = data.source === "supabase";
+  const live = data.source === "supabase" && data.issues.length === 0;
   return (
     <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
@@ -83,7 +92,7 @@ function PageHeader({ data }: { data: ModelsOverview }) {
           }`}
         >
           <Database className="size-3" />
-          {live ? "Live · Supabase" : "No configurado"}
+          {live ? "Registro Supabase consultado" : "Datos no disponibles"}
         </span>
         <span>Leído {utcTimestamp(data.fetched_at)}</span>
       </div>
@@ -98,7 +107,7 @@ function ChampionCard({ data }: { data: ModelsOverview }) {
     return (
       <EmptyCard
         badges={<RoleBadge tone="cyan">Champion</RoleBadge>}
-        title="No hay un champion activo único"
+        title={data.source === "not_configured" || data.issues.some((issue) => issue.table === "model_versions") ? "Registro de champion no disponible" : "No hay un champion activo único"}
         status={health.status}
         checks={health.checks}
       />
@@ -115,7 +124,7 @@ function ChampionCard({ data }: { data: ModelsOverview }) {
       }
       subtitle="Modelo oficial · el único que puede hacer submissions"
       status={health.status}
-      params={CHAMPION_PARAMS}
+      params={model.model_type === "adaptive_harmonic_candidate_l" ? L_PARAMS : CHAMPION_PARAMS}
     >
       <div className="rounded-md border border-white/10 bg-white/[0.025] p-3">
         <div className="flex items-center justify-between gap-3">
@@ -135,8 +144,8 @@ function ShadowCard({ model }: { model: ModelVersion | null }) {
     return (
       <EmptyCard
         badges={<RoleBadge tone="violet">Shadow</RoleBadge>}
-        title="Candidate I no está registrado"
-        status="FAILED"
+        title="Candidate I sin registro disponible"
+        status="UNKNOWN"
         checks={[{ label: "Registrado", state: "fail", detail: "No existe fila en model_versions para el shadow challenger." }]}
       />
     );
@@ -170,7 +179,7 @@ function ShadowCard({ model }: { model: ModelVersion | null }) {
         </p>
         {typeof sealedTest === "string" ? (
           <p className="mt-2 break-words text-xs leading-5 text-slate-500">
-            Selección offline (registro, no live): {sealedTest}
+            Selección offline (registro, histórico): {sealedTest}
           </p>
         ) : null}
       </div>
@@ -328,7 +337,7 @@ function ComparisonSection({ comparison }: { comparison: CycleComparison | null 
         <Tile
           label="Targets resueltos"
           value={resolved === null ? "n/a" : `${resolved} / ${comparison.cycle_targets}`}
-          detail={resolved === null ? "No se pudieron leer observations." : "Targets con observation real en Supabase."}
+          detail={resolved === null ? "El snapshot no incluye cobertura para este ciclo." : "Cobertura reportada por el snapshot canónico."}
         />
         <Tile
           label="Accuracy G vs I"

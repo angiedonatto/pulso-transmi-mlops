@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Activity, BarChart3, Boxes, Database, GitBranch, Home, RadioTower, Route, ServerCog } from "lucide-react";
 import { StatusPill } from "@/components/status-pill";
-import type { MonitoringSnapshot } from "@/lib/types";
-import { shortDate } from "@/lib/format";
+import type { SnapshotResult } from "@/lib/types";
+import { utcTimestamp } from "@/lib/format";
 
 const nav = [
   { href: "/", label: "Vista general", icon: Home },
@@ -17,12 +18,19 @@ const nav = [
   { href: "/operations", label: "Operaciones", icon: ServerCog },
 ];
 
-export function Shell({ children, snapshot }: { children: React.ReactNode; snapshot: MonitoringSnapshot & { source: "supabase" | "demo" } }) {
+export function Shell({ children, monitoring, stale }: { children: React.ReactNode; monitoring: SnapshotResult; stale: boolean }) {
   const pathname = usePathname();
-  const routeOwnsRealData = (pathname === "/models" || pathname === "/accuracy") && snapshot.source === "demo";
-  const shellStatus = routeOwnsRealData ? "UNKNOWN" : snapshot.overall_status;
-  const driftStatus = routeOwnsRealData ? "UNKNOWN" : snapshot.drift_status;
-  const sourceLabel = routeOwnsRealData ? "sin configurar" : snapshot.source === "demo" ? "datos de muestra" : "Supabase";
+  const router = useRouter();
+  const snapshot = monitoring.snapshot;
+  const shellStatus = snapshot?.overall_status ?? "UNKNOWN";
+  const driftStatus = snapshot?.drift_status ?? "UNKNOWN";
+  const sourceLabel = snapshot ? "Supabase · histórico" : "sin datos";
+  useEffect(() => {
+    const configured = Number(process.env.NEXT_PUBLIC_DASHBOARD_REFRESH_SECONDS || 60);
+    const seconds = Number.isFinite(configured) ? Math.min(3600, Math.max(15, configured)) : 60;
+    const timer = setInterval(() => { if (document.visibilityState === "visible") router.refresh(); }, seconds * 1000);
+    return () => clearInterval(timer);
+  }, [router]);
 
   return (
     <div className="relative min-h-screen">
@@ -39,7 +47,7 @@ export function Shell({ children, snapshot }: { children: React.ReactNode; snaps
         </div>
         <nav className="mt-8 space-y-1">
           {nav.map((item) => (
-            <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white">
+            <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white">
               <item.icon className="size-4 text-slate-500" />
               {item.label}
             </Link>
@@ -51,7 +59,7 @@ export function Shell({ children, snapshot }: { children: React.ReactNode; snaps
             <StatusPill status={shellStatus} compact />
             <span className="text-xs text-slate-400">{sourceLabel}</span>
           </div>
-          <p className="mt-2 text-xs text-slate-400">{shortDate(snapshot.generated_at)}</p>
+          <p className="mt-2 text-xs text-slate-400">{utcTimestamp(snapshot?.generated_at)}</p>
         </div>
       </aside>
       <main className="relative z-10 px-4 py-4 lg:ml-64 lg:px-8 lg:py-6">
@@ -68,6 +76,16 @@ export function Shell({ children, snapshot }: { children: React.ReactNode; snaps
             <StatusPill status={driftStatus} />
           </div>
         </header>
+        <nav aria-label="Navegación móvil" className="mb-4 flex flex-wrap gap-3 text-sm text-cyan-100 lg:hidden">
+          {nav.map((item) => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined}>{item.label}</Link>)}
+        </nav>
+        <section role="status" className="mb-5 rounded-lg border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm text-slate-300">
+          {snapshot ? <>
+            <p className="font-semibold text-amber-100">{stale ? "Datos desactualizados" : "Snapshot histórico"} · no representa tiempo real</p>
+            <p className="mt-1">Snapshot generado: {utcTimestamp(snapshot.generated_at)}. Los estados, métricas y alertas corresponden a ese momento.</p>
+          </> : <p>{monitoring.message}</p>}
+          <button onClick={() => router.refresh()} className="mt-2 text-cyan-100 underline">Volver a consultar</button>
+        </section>
         {children}
       </main>
     </div>

@@ -10,12 +10,7 @@ export function shortDate(value: unknown): string {
   if (typeof value !== "string" || !value) return "n/a";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("es-CO", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  return utcTimestamp(value);
 }
 
 export function utcTimestamp(value: unknown): string {

@@ -1,3 +1,4 @@
+import { DataUnavailable } from "@/components/data-unavailable";
 import { Database, Rows3, ShieldCheck } from "lucide-react";
 import { DataTable } from "@/components/data-table";
 import { MetricCard } from "@/components/metric-card";
@@ -5,7 +6,9 @@ import { getMonitoringSnapshot } from "@/lib/monitoring";
 import { numberValue, shortDate, text } from "@/lib/format";
 
 export default async function DataPage() {
-  const snapshot = await getMonitoringSnapshot();
+  const result = await getMonitoringSnapshot();
+  if (!result.snapshot) return <DataUnavailable message={result.message} />;
+  const snapshot = result.snapshot;
   const latest = snapshot.report.latest_observation;
   const quality = snapshot.report.data_quality;
 

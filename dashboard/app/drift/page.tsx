@@ -1,3 +1,4 @@
+import { DataUnavailable } from "@/components/data-unavailable";
 import { RadioTower, RefreshCw, SignalHigh } from "lucide-react";
 import { DataTable } from "@/components/data-table";
 import { MetricCard } from "@/components/metric-card";
@@ -6,7 +7,9 @@ import { getMonitoringSnapshot } from "@/lib/monitoring";
 import { text } from "@/lib/format";
 
 export default async function DriftPage() {
-  const snapshot = await getMonitoringSnapshot();
+  const result = await getMonitoringSnapshot();
+  if (!result.snapshot) return <DataUnavailable message={result.message} />;
+  const snapshot = result.snapshot;
   const drift = snapshot.report.drift;
   const dataDrift = drift.data_drift as { status?: string; alerts?: Array<Record<string, unknown>>; station_metrics?: Array<Record<string, unknown>> };
   const residual = drift.residual_drift as { status?: string; by_station?: Array<Record<string, unknown>>; by_horizon?: Array<Record<string, unknown>> };
@@ -16,7 +19,7 @@ export default async function DriftPage() {
       <section className="grid gap-3 md:grid-cols-3">
         <MetricCard icon={RadioTower} label="Drift general" value={drift.status} status={drift.status} detail={drift.reasons.join(" · ") || "Sin razones de drift"} />
         <MetricCard icon={SignalHigh} label="Data drift" value={text(dataDrift.status, "UNKNOWN")} status={text(dataDrift.status, "UNKNOWN")} detail="PSI, KS y checks de distribución desde drift_monitor.py" />
-        <MetricCard icon={RefreshCw} label="Retrain" value={drift.retrain_recommended ? "Recomendado" : "No necesario"} status={drift.retrain_recommended ? "DRIFT" : "HEALTHY"} detail="Calculado por la lógica canónica de drift" />
+        <MetricCard icon={RefreshCw} label="Retrain" value={drift.retrain_recommended ? "Recomendado" : "No recomendado en el snapshot"} status={drift.retrain_recommended ? "DRIFT" : "HEALTHY"} detail="Calculado por la lógica canónica de drift" />
       </section>
       <div className="rounded-lg border border-white/10 bg-[#10151d]/88 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -24,7 +27,7 @@ export default async function DriftPage() {
           <StatusPill status={drift.status} />
         </div>
         <ul className="mt-4 grid gap-2 md:grid-cols-2">
-          {(drift.reasons.length ? drift.reasons : ["No hay razón activa de drift."]).map((reason) => (
+          {(drift.reasons.length ? drift.reasons : ["No se reportaron razones en el snapshot."]).map((reason) => (
             <li key={reason} className="rounded-md border border-white/10 bg-white/[0.035] px-3 py-2 text-sm text-slate-300">{reason}</li>
           ))}
         </ul>

@@ -1,0 +1,1008 @@
+{
+  "notice": "SYNTHETIC TEST DATA, not Supabase production. Generated with tests/test_drift_monitor.build_tables and src/monitoring_snapshot.build_monitoring_snapshot. First station demand/prediction increased by 300 to distinguish mean-station accuracy from global accuracy.",
+  "models": [
+    {
+      "model_id": "11111111-1111-4111-8111-111111111111",
+      "is_active": true,
+      "trained_until": "2026-01-06T00:00:00Z",
+      "model_name": "candidate_l_v1_recent_harmonic",
+      "model_type": "adaptive_harmonic_candidate_l",
+      "run_id": "fixture-pipeline-run",
+      "artifact_uri": null,
+      "params": {
+        "window": 40,
+        "min_rows": 32,
+        "harmonics": 2,
+        "ridge": 0.05
+      },
+      "feature_config": {}
+    }
+  ],
+  "snapshot": {
+    "generated_at": "2026-01-20T00:00:00Z",
+    "model_id": "11111111-1111-4111-8111-111111111111",
+    "overall_status": "DRIFT",
+    "drift_status": "WATCH",
+    "retrain_recommended": false,
+    "report": {
+      "drift": {
+        "status": "WATCH",
+        "retrain_recommended": false,
+        "reasons": [
+          "mild performance drop 16.88pp",
+          "sustained residual bias",
+          "28 observations since active model training"
+        ],
+        "performance": {
+          "status": "WATCH",
+          "accuracy_metric": "mean_station_accuracy",
+          "cycle_count": 12,
+          "cycle_accuracy": [
+            {
+              "cycle_id": "cycle_00",
+              "accepted_at": "2026-01-01T09:00:00Z",
+              "cycle_accuracy": 95.0,
+              "mean_station_accuracy": 95.0,
+              "global_wape": 0.032,
+              "global_wape_accuracy": 96.8,
+              "rolling6_accuracy": 95.0,
+              "rolling6_global_wape_accuracy": 96.8,
+              "rolling12_accuracy": 95.0,
+              "rolling12_global_wape_accuracy": 96.8,
+              "rolling6_mean_cycle_accuracy": 95.0,
+              "rolling12_mean_cycle_accuracy": 95.0
+            },
+            {
+              "cycle_id": "cycle_01",
+              "accepted_at": "2026-01-02T09:00:00Z",
+              "cycle_accuracy": 95.0,
+              "mean_station_accuracy": 95.0,
+              "global_wape": 0.032,
+              "global_wape_accuracy": 96.8,
+              "rolling6_accuracy": 95.0,
+              "rolling6_global_wape_accuracy": 96.8,
+              "rolling12_accuracy": 95.0,
+              "rolling12_global_wape_accuracy": 96.8,
+              "rolling6_mean_cycle_accuracy": 95.0,
+              "rolling12_mean_cycle_accuracy": 95.0
+            },
+            {
+              "cycle_id": "cycle_02",
+              "accepted_at": "2026-01-03T09:00:00Z",
+              "cycle_accuracy": 95.0,
+              "mean_station_accuracy": 95.0,
+              "global_wape": 0.032,
+              "global_wape_accuracy": 96.8,
+              "rolling6_accuracy": 95.0,
+              "rolling6_global_wape_accuracy": 96.8,
+              "rolling12_accuracy": 95.0,
+              "rolling12_global_wape_accuracy": 96.8,
+              "rolling6_mean_cycle_accuracy": 95.0,
+              "rolling12_mean_cycle_accuracy": 95.0
+            },
+            {
+              "cycle_id": "cycle_03",
+              "accepted_at": "2026-01-04T09:00:00Z",
+              "cycle_accuracy": 95.0,
+              "mean_station_accuracy": 95.0,
+              "global_wape": 0.032,
+              "global_wape_accuracy": 96.8,
+              "rolling6_accuracy": 95.0,
+              "rolling6_global_wape_accuracy": 96.8,
+              "rolling12_accuracy": 95.0,
+              "rolling12_global_wape_accuracy": 96.8,
+              "rolling6_mean_cycle_accuracy": 95.0,
+              "rolling12_mean_cycle_accuracy": 95.0
+            },
+            {
+              "cycle_id": "cycle_04",
+              "accepted_at": "2026-01-05T09:00:00Z",
+              "cycle_accuracy": 95.0,
+              "mean_station_accuracy": 95.0,
+              "global_wape": 0.032,
+              "global_wape_accuracy": 96.8,
+              "rolling6_accuracy": 95.0,
+              "rolling6_global_wape_accuracy": 96.8,
+              "rolling12_accuracy": 95.0,
+              "rolling12_global_wape_accuracy": 96.8,
+              "rolling6_mean_cycle_accuracy": 95.0,
+              "rolling12_mean_cycle_accuracy": 95.0
+            },
+            {
+              "cycle_id": "cycle_05",
+              "accepted_at": "2026-01-06T09:00:00Z",
+              "cycle_accuracy": 95.0,
+              "mean_station_accuracy": 95.0,
+              "global_wape": 0.032,
+              "global_wape_accuracy": 96.8,
+              "rolling6_accuracy": 95.0,
+              "rolling6_global_wape_accuracy": 96.8,
+              "rolling12_accuracy": 95.0,
+              "rolling12_global_wape_accuracy": 96.8,
+              "rolling6_mean_cycle_accuracy": 95.0,
+              "rolling12_mean_cycle_accuracy": 95.0
+            },
+            {
+              "cycle_id": "cycle_06",
+              "accepted_at": "2026-01-07T09:00:00Z",
+              "cycle_accuracy": 78.125,
+              "mean_station_accuracy": 78.125,
+              "global_wape": 0.14,
+              "global_wape_accuracy": 86.0,
+              "rolling6_accuracy": 92.1875,
+              "rolling6_global_wape_accuracy": 95.0,
+              "rolling12_accuracy": 92.58928571428571,
+              "rolling12_global_wape_accuracy": 95.25714285714287,
+              "rolling6_mean_cycle_accuracy": 92.1875,
+              "rolling12_mean_cycle_accuracy": 92.58928571428571
+            },
+            {
+              "cycle_id": "cycle_07",
+              "accepted_at": "2026-01-08T09:00:00Z",
+              "cycle_accuracy": 78.125,
+              "mean_station_accuracy": 78.125,
+              "global_wape": 0.14,
+              "global_wape_accuracy": 86.0,
+              "rolling6_accuracy": 89.375,
+              "rolling6_global_wape_accuracy": 93.19999999999999,
+              "rolling12_accuracy": 90.78125,
+              "rolling12_global_wape_accuracy": 94.10000000000001,
+              "rolling6_mean_cycle_accuracy": 89.375,
+              "rolling12_mean_cycle_accuracy": 90.78125
+            },
+            {
+              "cycle_id": "cycle_08",
+              "accepted_at": "2026-01-09T09:00:00Z",
+              "cycle_accuracy": 78.125,
+              "mean_station_accuracy": 78.125,
+              "global_wape": 0.14,
+              "global_wape_accuracy": 86.0,
+              "rolling6_accuracy": 86.5625,
+              "rolling6_global_wape_accuracy": 91.4,
+              "rolling12_accuracy": 89.375,
+              "rolling12_global_wape_accuracy": 93.19999999999999,
+              "rolling6_mean_cycle_accuracy": 86.5625,
+              "rolling12_mean_cycle_accuracy": 89.375
+            },
+            {
+              "cycle_id": "cycle_09",
+              "accepted_at": "2026-01-10T09:00:00Z",
+              "cycle_accuracy": 78.125,
+              "mean_station_accuracy": 78.125,
+              "global_wape": 0.14,
+              "global_wape_accuracy": 86.0,
+              "rolling6_accuracy": 83.75,
+              "rolling6_global_wape_accuracy": 89.60000000000001,
+              "rolling12_accuracy": 88.25,
+              "rolling12_global_wape_accuracy": 92.47999999999999,
+              "rolling6_mean_cycle_accuracy": 83.75,
+              "rolling12_mean_cycle_accuracy": 88.25
+            },
+            {
+              "cycle_id": "cycle_10",
+              "accepted_at": "2026-01-11T09:00:00Z",
+              "cycle_accuracy": 78.125,
+              "mean_station_accuracy": 78.125,
+              "global_wape": 0.14,
+              "global_wape_accuracy": 86.0,
+              "rolling6_accuracy": 80.9375,
+              "rolling6_global_wape_accuracy": 87.8,
+              "rolling12_accuracy": 87.32954545454545,
+              "rolling12_global_wape_accuracy": 91.89090909090909,
+              "rolling6_mean_cycle_accuracy": 80.9375,
+              "rolling12_mean_cycle_accuracy": 87.32954545454545
+            },
+            {
+              "cycle_id": "cycle_11",
+              "accepted_at": "2026-01-12T09:00:00Z",
+              "cycle_accuracy": 78.125,
+              "mean_station_accuracy": 78.125,
+              "global_wape": 0.14,
+              "global_wape_accuracy": 86.0,
+              "rolling6_accuracy": 78.125,
+              "rolling6_global_wape_accuracy": 86.0,
+              "rolling12_accuracy": 86.5625,
+              "rolling12_global_wape_accuracy": 91.4,
+              "rolling6_mean_cycle_accuracy": 78.125,
+              "rolling12_mean_cycle_accuracy": 86.5625
+            }
+          ],
+          "recent_cycle_ids": [
+            "cycle_06",
+            "cycle_07",
+            "cycle_08",
+            "cycle_09",
+            "cycle_10",
+            "cycle_11"
+          ],
+          "reference_cycle_ids": [
+            "cycle_00",
+            "cycle_01",
+            "cycle_02",
+            "cycle_03",
+            "cycle_04",
+            "cycle_05"
+          ],
+          "recent6_accuracy": 78.125,
+          "recent12_accuracy": 86.5625,
+          "recent6_global_wape_accuracy": 86.0,
+          "recent12_global_wape_accuracy": 91.4,
+          "recent6_mean_cycle_accuracy": 78.125,
+          "recent12_mean_cycle_accuracy": 86.5625,
+          "recent_accuracy": 78.125,
+          "reference_accuracy": 95.0,
+          "recent_global_wape_accuracy": 86.0,
+          "reference_global_wape_accuracy": 96.8,
+          "recent_mean_cycle_accuracy": 78.125,
+          "reference_mean_cycle_accuracy": 95.0,
+          "recent_accuracy_at_20": 50.0,
+          "accuracy_drop_pp": 16.875,
+          "leaderboard_rolling_24h": {
+            "rows": 48,
+            "mean_station_accuracy": 86.5625,
+            "global_wape": 0.086,
+            "global_wape_accuracy": 91.4,
+            "accuracy_at_20": 75.0,
+            "cycles": 12,
+            "covered_cycles": 12,
+            "coverage": 1.0,
+            "missing_cutoffs": [],
+            "unresolved_missing_targets": 0,
+            "accuracy_if_missing_excluded": 86.5625,
+            "start_cutoff": "2026-01-01T08:00:00Z",
+            "end_cutoff": "2026-01-12T08:00:00Z"
+          },
+          "overall": {
+            "count": 48,
+            "wape": 0.086,
+            "accuracy": 91.4,
+            "mae": 21.5,
+            "bias": -21.5,
+            "signed_relative_bias": -0.086
+          },
+          "recent": {
+            "count": 24,
+            "wape": 0.14,
+            "accuracy": 86.0,
+            "mae": 35.0,
+            "bias": -35.0,
+            "signed_relative_bias": -0.14
+          },
+          "reference": {
+            "count": 24,
+            "wape": 0.032,
+            "accuracy": 96.8,
+            "mae": 8.0,
+            "bias": -8.0,
+            "signed_relative_bias": -0.032
+          },
+          "station_accuracy": [
+            {
+              "station_id": "03000",
+              "recent_wape": 0.35,
+              "recent_accuracy": 65.0,
+              "mae_x": 35.0,
+              "bias_x": -35.0,
+              "signed_relative_bias_x": -0.35,
+              "count_x": 12,
+              "reference_wape": 0.08,
+              "reference_accuracy": 92.0,
+              "mae_y": 8.0,
+              "bias_y": -8.0,
+              "signed_relative_bias_y": -0.08,
+              "count_y": 12,
+              "delta_pp": -27.0
+            },
+            {
+              "station_id": "02300",
+              "recent_wape": 0.0875,
+              "recent_accuracy": 91.25,
+              "mae_x": 35.0,
+              "bias_x": -35.0,
+              "signed_relative_bias_x": -0.0875,
+              "count_x": 12,
+              "reference_wape": 0.02,
+              "reference_accuracy": 98.0,
+              "mae_y": 8.0,
+              "bias_y": -8.0,
+              "signed_relative_bias_y": -0.02,
+              "count_y": 12,
+              "delta_pp": -6.75
+            }
+          ],
+          "horizon_accuracy": [
+            {
+              "horizon_minutes": 15,
+              "recent_wape": 0.14,
+              "recent_accuracy": 86.0,
+              "mae_x": 35.0,
+              "bias_x": -35.0,
+              "signed_relative_bias_x": -0.14,
+              "count_x": 12,
+              "reference_wape": 0.032,
+              "reference_accuracy": 96.8,
+              "mae_y": 8.0,
+              "bias_y": -8.0,
+              "signed_relative_bias_y": -0.032,
+              "count_y": 12,
+              "delta_pp": -10.799999999999997
+            },
+            {
+              "horizon_minutes": 30,
+              "recent_wape": 0.14,
+              "recent_accuracy": 86.0,
+              "mae_x": 35.0,
+              "bias_x": -35.0,
+              "signed_relative_bias_x": -0.14,
+              "count_x": 12,
+              "reference_wape": 0.032,
+              "reference_accuracy": 96.8,
+              "mae_y": 8.0,
+              "bias_y": -8.0,
+              "signed_relative_bias_y": -0.032,
+              "count_y": 12,
+              "delta_pp": -10.799999999999997
+            }
+          ]
+        },
+        "data_drift": {
+          "status": "HEALTHY",
+          "reference": {
+            "rows": 144,
+            "start": "2025-12-01T00:00:00Z",
+            "end": "2025-12-01T17:45:00Z",
+            "stations": 2
+          },
+          "recent": {
+            "rows": 144,
+            "start": "2025-12-01T18:00:00Z",
+            "end": "2026-01-12T08:30:00Z",
+            "stations": 2
+          },
+          "station_metrics": [
+            {
+              "reference_count": 72,
+              "recent_count": 72,
+              "reference_missing_rate": 0.0,
+              "recent_missing_rate": 0.0,
+              "sample_status": "ok",
+              "reference": {
+                "count": 72.0,
+                "mean": 400.0,
+                "median": 400.0,
+                "std": 0.0,
+                "p10": 400.0,
+                "p25": 400.0,
+                "p75": 400.0,
+                "p90": 400.0,
+                "iqr": 0.0,
+                "outlier_rate": 0.0
+              },
+              "recent": {
+                "count": 72.0,
+                "mean": 400.0,
+                "median": 400.0,
+                "std": 0.0,
+                "p10": 400.0,
+                "p25": 400.0,
+                "p75": 400.0,
+                "p90": 400.0,
+                "iqr": 0.0,
+                "outlier_rate": 0.0
+              },
+              "median_relative_change": 0.0,
+              "dispersion_relative_change": 0.0,
+              "psi": 0.0,
+              "ks_statistic": 0.0,
+              "station_id": "02300"
+            },
+            {
+              "reference_count": 72,
+              "recent_count": 72,
+              "reference_missing_rate": 0.0,
+              "recent_missing_rate": 0.0,
+              "sample_status": "ok",
+              "reference": {
+                "count": 72.0,
+                "mean": 100.0,
+                "median": 100.0,
+                "std": 0.0,
+                "p10": 100.0,
+                "p25": 100.0,
+                "p75": 100.0,
+                "p90": 100.0,
+                "iqr": 0.0,
+                "outlier_rate": 0.0
+              },
+              "recent": {
+                "count": 72.0,
+                "mean": 100.0,
+                "median": 100.0,
+                "std": 0.0,
+                "p10": 100.0,
+                "p25": 100.0,
+                "p75": 100.0,
+                "p90": 100.0,
+                "iqr": 0.0,
+                "outlier_rate": 0.0
+              },
+              "median_relative_change": 0.0,
+              "dispersion_relative_change": 0.0,
+              "psi": 0.0,
+              "ks_statistic": 0.0,
+              "station_id": "03000"
+            }
+          ],
+          "alerts": [],
+          "new_stations": [],
+          "missing_stations": [],
+          "new_observations_since_training": 28
+        },
+        "residual_drift": {
+          "status": "DRIFT",
+          "overall_recent_bias": -35.0,
+          "overall_recent_signed_relative_bias": -0.14,
+          "overall_recent_mae": 35.0,
+          "global": {
+            "bias": -35.0,
+            "signed_relative_bias": -0.14,
+            "mae": 35.0,
+            "count": 24,
+            "residual_sum": -840.0,
+            "actual_sum": 6000.0,
+            "relative_bias_watch_windows": 6,
+            "relative_bias_drift_windows": 6,
+            "relative_bias_persistent_direction": "negative"
+          },
+          "by_station": [
+            {
+              "station_id": "02300",
+              "bias": -35.0,
+              "signed_relative_bias": -0.0875,
+              "mae": 35.0,
+              "count": 12,
+              "residual_sum": -420.0,
+              "actual_sum": 4800.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 0,
+              "relative_bias_persistent_direction": "negative"
+            },
+            {
+              "station_id": "03000",
+              "bias": -35.0,
+              "signed_relative_bias": -0.35,
+              "mae": 35.0,
+              "count": 12,
+              "residual_sum": -420.0,
+              "actual_sum": 1200.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative"
+            }
+          ],
+          "by_horizon": [
+            {
+              "horizon_minutes": 15,
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 12,
+              "residual_sum": -420.0,
+              "actual_sum": 3000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative"
+            },
+            {
+              "horizon_minutes": 30,
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 12,
+              "residual_sum": -420.0,
+              "actual_sum": 3000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative"
+            }
+          ],
+          "by_station_horizon": [
+            {
+              "station_id": "02300",
+              "horizon_minutes": 15,
+              "bias": -35.0,
+              "signed_relative_bias": -0.0875,
+              "mae": 35.0,
+              "count": 6,
+              "residual_sum": -210.0,
+              "actual_sum": 2400.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 0,
+              "relative_bias_persistent_direction": "negative"
+            },
+            {
+              "station_id": "02300",
+              "horizon_minutes": 30,
+              "bias": -35.0,
+              "signed_relative_bias": -0.0875,
+              "mae": 35.0,
+              "count": 6,
+              "residual_sum": -210.0,
+              "actual_sum": 2400.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 0,
+              "relative_bias_persistent_direction": "negative"
+            },
+            {
+              "station_id": "03000",
+              "horizon_minutes": 15,
+              "bias": -35.0,
+              "signed_relative_bias": -0.35,
+              "mae": 35.0,
+              "count": 6,
+              "residual_sum": -210.0,
+              "actual_sum": 600.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative"
+            },
+            {
+              "station_id": "03000",
+              "horizon_minutes": 30,
+              "bias": -35.0,
+              "signed_relative_bias": -0.35,
+              "mae": 35.0,
+              "count": 6,
+              "residual_sum": -210.0,
+              "actual_sum": 600.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative"
+            }
+          ],
+          "by_hour": [
+            {
+              "target_hour": 3,
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 24,
+              "residual_sum": -840.0,
+              "actual_sum": 6000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative"
+            }
+          ],
+          "by_model": [
+            {
+              "model_id": "11111111-1111-4111-8111-111111111111",
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 24,
+              "residual_sum": -840.0,
+              "actual_sum": 6000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative"
+            }
+          ],
+          "alerts": [
+            {
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 24,
+              "residual_sum": -840.0,
+              "actual_sum": 6000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative",
+              "group": "global",
+              "severity": "drift"
+            },
+            {
+              "station_id": "02300",
+              "bias": -35.0,
+              "signed_relative_bias": -0.0875,
+              "mae": 35.0,
+              "count": 12,
+              "residual_sum": -420.0,
+              "actual_sum": 4800.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 0,
+              "relative_bias_persistent_direction": "negative",
+              "group": "station",
+              "severity": "watch"
+            },
+            {
+              "station_id": "03000",
+              "bias": -35.0,
+              "signed_relative_bias": -0.35,
+              "mae": 35.0,
+              "count": 12,
+              "residual_sum": -420.0,
+              "actual_sum": 1200.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative",
+              "group": "station",
+              "severity": "drift"
+            },
+            {
+              "horizon_minutes": 15,
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 12,
+              "residual_sum": -420.0,
+              "actual_sum": 3000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative",
+              "group": "horizon",
+              "severity": "drift"
+            },
+            {
+              "horizon_minutes": 30,
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 12,
+              "residual_sum": -420.0,
+              "actual_sum": 3000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative",
+              "group": "horizon",
+              "severity": "drift"
+            },
+            {
+              "station_id": "02300",
+              "horizon_minutes": 15,
+              "bias": -35.0,
+              "signed_relative_bias": -0.0875,
+              "mae": 35.0,
+              "count": 6,
+              "residual_sum": -210.0,
+              "actual_sum": 2400.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 0,
+              "relative_bias_persistent_direction": "negative",
+              "group": "station_horizon",
+              "severity": "watch"
+            },
+            {
+              "station_id": "02300",
+              "horizon_minutes": 30,
+              "bias": -35.0,
+              "signed_relative_bias": -0.0875,
+              "mae": 35.0,
+              "count": 6,
+              "residual_sum": -210.0,
+              "actual_sum": 2400.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 0,
+              "relative_bias_persistent_direction": "negative",
+              "group": "station_horizon",
+              "severity": "watch"
+            },
+            {
+              "station_id": "03000",
+              "horizon_minutes": 15,
+              "bias": -35.0,
+              "signed_relative_bias": -0.35,
+              "mae": 35.0,
+              "count": 6,
+              "residual_sum": -210.0,
+              "actual_sum": 600.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative",
+              "group": "station_horizon",
+              "severity": "drift"
+            },
+            {
+              "station_id": "03000",
+              "horizon_minutes": 30,
+              "bias": -35.0,
+              "signed_relative_bias": -0.35,
+              "mae": 35.0,
+              "count": 6,
+              "residual_sum": -210.0,
+              "actual_sum": 600.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative",
+              "group": "station_horizon",
+              "severity": "drift"
+            },
+            {
+              "target_hour": 3,
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 24,
+              "residual_sum": -840.0,
+              "actual_sum": 6000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative",
+              "group": "hour",
+              "severity": "drift"
+            },
+            {
+              "model_id": "11111111-1111-4111-8111-111111111111",
+              "bias": -35.0,
+              "signed_relative_bias": -0.14,
+              "mae": 35.0,
+              "count": 24,
+              "residual_sum": -840.0,
+              "actual_sum": 6000.0,
+              "relative_bias_watch_windows": 6,
+              "relative_bias_drift_windows": 6,
+              "relative_bias_persistent_direction": "negative",
+              "group": "model",
+              "severity": "drift"
+            }
+          ]
+        },
+        "station_alerts": [
+          {
+            "station_id": "03000",
+            "recent_wape": 0.35,
+            "recent_accuracy": 65.0,
+            "mae_x": 35.0,
+            "bias_x": -35.0,
+            "signed_relative_bias_x": -0.35,
+            "count_x": 12,
+            "reference_wape": 0.08,
+            "reference_accuracy": 92.0,
+            "mae_y": 8.0,
+            "bias_y": -8.0,
+            "signed_relative_bias_y": -0.08,
+            "count_y": 12,
+            "delta_pp": -27.0,
+            "type": "station_performance_drop"
+          },
+          {
+            "station_id": "02300",
+            "bias": -35.0,
+            "signed_relative_bias": -0.0875,
+            "mae": 35.0,
+            "count": 12,
+            "residual_sum": -420.0,
+            "actual_sum": 4800.0,
+            "relative_bias_watch_windows": 6,
+            "relative_bias_drift_windows": 0,
+            "relative_bias_persistent_direction": "negative",
+            "group": "station",
+            "severity": "watch",
+            "type": "station_bias"
+          },
+          {
+            "station_id": "03000",
+            "bias": -35.0,
+            "signed_relative_bias": -0.35,
+            "mae": 35.0,
+            "count": 12,
+            "residual_sum": -420.0,
+            "actual_sum": 1200.0,
+            "relative_bias_watch_windows": 6,
+            "relative_bias_drift_windows": 6,
+            "relative_bias_persistent_direction": "negative",
+            "group": "station",
+            "severity": "drift",
+            "type": "station_bias"
+          }
+        ],
+        "horizon_alerts": [
+          {
+            "horizon_minutes": 15,
+            "recent_wape": 0.14,
+            "recent_accuracy": 86.0,
+            "mae_x": 35.0,
+            "bias_x": -35.0,
+            "signed_relative_bias_x": -0.14,
+            "count_x": 12,
+            "reference_wape": 0.032,
+            "reference_accuracy": 96.8,
+            "mae_y": 8.0,
+            "bias_y": -8.0,
+            "signed_relative_bias_y": -0.032,
+            "count_y": 12,
+            "delta_pp": -10.799999999999997,
+            "type": "horizon_performance_drop"
+          },
+          {
+            "horizon_minutes": 30,
+            "recent_wape": 0.14,
+            "recent_accuracy": 86.0,
+            "mae_x": 35.0,
+            "bias_x": -35.0,
+            "signed_relative_bias_x": -0.14,
+            "count_x": 12,
+            "reference_wape": 0.032,
+            "reference_accuracy": 96.8,
+            "mae_y": 8.0,
+            "bias_y": -8.0,
+            "signed_relative_bias_y": -0.032,
+            "count_y": 12,
+            "delta_pp": -10.799999999999997,
+            "type": "horizon_performance_drop"
+          },
+          {
+            "horizon_minutes": 15,
+            "bias": -35.0,
+            "signed_relative_bias": -0.14,
+            "mae": 35.0,
+            "count": 12,
+            "residual_sum": -420.0,
+            "actual_sum": 3000.0,
+            "relative_bias_watch_windows": 6,
+            "relative_bias_drift_windows": 6,
+            "relative_bias_persistent_direction": "negative",
+            "group": "horizon",
+            "severity": "drift",
+            "type": "horizon_bias"
+          },
+          {
+            "horizon_minutes": 30,
+            "bias": -35.0,
+            "signed_relative_bias": -0.14,
+            "mae": 35.0,
+            "count": 12,
+            "residual_sum": -420.0,
+            "actual_sum": 3000.0,
+            "relative_bias_watch_windows": 6,
+            "relative_bias_drift_windows": 6,
+            "relative_bias_persistent_direction": "negative",
+            "group": "horizon",
+            "severity": "drift",
+            "type": "horizon_bias"
+          }
+        ],
+        "reference_window": {
+          "cycle_ids": [
+            "cycle_00",
+            "cycle_01",
+            "cycle_02",
+            "cycle_03",
+            "cycle_04",
+            "cycle_05"
+          ],
+          "rows": 144,
+          "start": "2025-12-01T00:00:00Z",
+          "end": "2025-12-01T17:45:00Z",
+          "stations": 2
+        },
+        "recent_window": {
+          "cycle_ids": [
+            "cycle_06",
+            "cycle_07",
+            "cycle_08",
+            "cycle_09",
+            "cycle_10",
+            "cycle_11"
+          ],
+          "rows": 144,
+          "start": "2025-12-01T18:00:00Z",
+          "end": "2026-01-12T08:30:00Z",
+          "stations": 2
+        }
+      },
+      "active_model": {
+        "model_id": "11111111-1111-4111-8111-111111111111",
+        "is_active": true,
+        "trained_until": "2026-01-06T00:00:00Z",
+        "model_name": "candidate_l_v1_recent_harmonic",
+        "model_type": "adaptive_harmonic_candidate_l",
+        "run_id": "fixture-pipeline-run",
+        "artifact_uri": null,
+        "params": {
+          "window": 40,
+          "min_rows": 32,
+          "harmonics": 2,
+          "ridge": 0.05
+        },
+        "feature_config": {}
+      },
+      "latest_observation": {
+        "observed_at": "2026-01-12T08:30:00Z",
+        "minutes_old": 413023.8,
+        "freshness_status": "STALE"
+      },
+      "current_cycle": {
+        "cycle_id": "cycle_11",
+        "data_cutoff": "2026-01-12T08:00:00Z",
+        "closes_at": "2026-01-12T09:00:00Z",
+        "expected_predictions": 4,
+        "actual_predictions": 4,
+        "prediction_status": "OK",
+        "submission_status": "ACCEPTED",
+        "is_official": true,
+        "receipt": {
+          "cycle_id": "cycle_11",
+          "model_id": "11111111-1111-4111-8111-111111111111",
+          "status": "accepted",
+          "is_official": true,
+          "accepted_at": "2026-01-12T09:00:00Z",
+          "created_at": "2026-01-12T09:00:00Z"
+        },
+        "resolved_targets": {
+          "actual": 0,
+          "expected": 4
+        },
+        "status": "HEALTHY"
+      },
+      "latest_submission": {
+        "cycle_id": "cycle_11",
+        "model_id": "11111111-1111-4111-8111-111111111111",
+        "status": "accepted",
+        "is_official": true,
+        "accepted_at": "2026-01-12T09:00:00Z",
+        "created_at": "2026-01-12T09:00:00Z"
+      },
+      "latest_pipeline_run": null,
+      "data_quality": {
+        "status": "UNKNOWN",
+        "failed_checks": 0,
+        "warning_checks": 0,
+        "latest_check_at": null
+      },
+      "stream_cursors": [],
+      "runtime_ingestion_events": [],
+      "prediction_traces": {
+        "available": false,
+        "recent_factors": []
+      },
+      "operations": {
+        "failed_pipeline_runs": 0,
+        "critical_ingestion_events": 0
+      },
+      "alerts": [
+        {
+          "severity": "warning",
+          "timestamp": "2026-10-26T04:13:50.358414Z",
+          "category": "data",
+          "title": "Data stale",
+          "explanation": "latest observation is outside the expected freshness window",
+          "entity": "2026-01-12T08:30:00Z"
+        },
+        {
+          "severity": "warning",
+          "timestamp": "2026-10-26T04:13:50.358414Z",
+          "category": "drift",
+          "title": "Drift status WATCH",
+          "explanation": "canonical drift monitor reported a non-healthy state",
+          "entity": "WATCH"
+        },
+        {
+          "severity": "warning",
+          "timestamp": "2026-10-26T04:13:50.358414Z",
+          "category": "station",
+          "title": "Station performance alert",
+          "explanation": "station_performance_drop",
+          "entity": "03000"
+        },
+        {
+          "severity": "warning",
+          "timestamp": "2026-10-26T04:13:50.358414Z",
+          "category": "station",
+          "title": "Station performance alert",
+          "explanation": "station_bias",
+          "entity": "02300"
+        },
+        {
+          "severity": "critical",
+          "timestamp": "2026-10-26T04:13:50.358414Z",
+          "category": "station",
+          "title": "Station performance alert",
+          "explanation": "station_bias",
+          "entity": "03000"
+        }
+      ]
+    }
+  }
+}

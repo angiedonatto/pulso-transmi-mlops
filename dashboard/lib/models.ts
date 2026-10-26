@@ -1,3 +1,5 @@
+import "server-only";
+import { getMonitoringSnapshot } from "@/lib/monitoring";
 import { getSupabaseReader, readRows, type ReadIssue, type SupabaseReader } from "@/lib/supabase";
 import { utcTimestamp } from "@/lib/format";
 
@@ -229,8 +231,7 @@ async function loadComparison(db: SupabaseReader, cycleId: string, champion: Mod
   const championKeys = new Set(predictions.rows.filter((row) => row.model_id === champion.model_id).map((row) => targetKey(row.station_id, row.target_observed_at)));
   const shared = predictions.rows.filter((row) => row.model_id === shadow.model_id && championKeys.has(targetKey(row.station_id, row.target_observed_at))).length;
 
-  const resolved = await resolvedTargets(db, targets.rows);
-  if (!resolved.ok) issues.push(resolved.issue);
+  const resolved = await resolvedTargets(cycleId);
 
   return {
     issues,
@@ -240,24 +241,18 @@ async function loadComparison(db: SupabaseReader, cycleId: string, champion: Mod
       cycle_targets: cycleKeys.size,
       models,
       shared_targets: shared,
-      resolved_targets: resolved.ok ? resolved.count : null,
+      resolved_targets: resolved,
     } satisfies CycleComparison,
   };
 }
 
-// Only checks that an observation exists for each target; no demand values are read and
-// no accuracy is computed here (the canonical metrics live in src/drift_monitor.py).
-async function resolvedTargets(db: SupabaseReader, targets: TargetRow[]) {
-  if (!targets.length) return { ok: true as const, count: 0 };
-  const stations = [...new Set(targets.map((row) => row.station_id))];
-  const times = [...new Set(targets.map((row) => row.target_at))];
-  const result = await readRows<{ station_id: string; observed_at: string }>(
-    "observations",
-    db.select("observations", "station_id,observed_at").in("station_id", stations).in("observed_at", times),
-  );
-  if (!result.ok) return result;
-  const wanted = new Set(targets.map((row) => targetKey(row.station_id, row.target_at)));
-  return { ok: true as const, count: result.rows.filter((row) => wanted.has(targetKey(row.station_id, row.observed_at))).length };
+// Coverage is taken only from the canonical snapshot for the exact same cycle.
+// The frontend never downloads observations or computes scoring/coverage from demand.
+async function resolvedTargets(cycleId: string) {
+  const { snapshot } = await getMonitoringSnapshot();
+  const cycle = snapshot?.report.current_cycle;
+  const counts = cycle?.resolved_targets as { actual?: unknown } | undefined;
+  return cycle?.cycle_id === cycleId && typeof counts?.actual === "number" ? counts.actual : null;
 }
 
 function buildAdaptation(cycleId: string, champion: ModelVersion, shadow: ModelVersion, traces: Awaited<ReturnType<typeof readRows<TraceRow>>>): Adaptation {
@@ -322,6 +317,11 @@ function championHealth(
     );
     checks.push(officialReceiptCheck(champion, cycle, receipt));
   }
+  if (latest) {
+    const age = Date.now() - Date.parse(latest.last_created_at);
+    checks.push({ label: "Freshness", state: !Number.isFinite(age) || age < -300000 ? "unknown" : age > 900000 ? "watch" : "pass",
+      detail: `Última predicción registrada: ${utcTimestamp(latest.last_created_at)}. Este registro no certifica actividad en tiempo real.` });
+  }
   return { status: rollup(checks, !champion || !latest), checks, latest_cycle_id: latest?.cycle_id ?? null };
 }
 
@@ -331,7 +331,7 @@ function officialReceiptCheck(champion: ModelVersion, cycle: CycleRow | null, re
   if (row && DELIVERED_STATUSES.has(row.status) && row.model_id === champion.model_id) {
     return { label: "Official submission", state: "pass", detail: `${row.status} en ${utcTimestamp(row.accepted_at)}.` };
   }
-  if (row) return { label: "Official submission", state: "watch", detail: `El receipt oficial está en ${row.status} y pertenece a otro model_id.` };
+  if (row) return { label: "Official submission", state: "watch", detail: row.model_id !== champion.model_id ? `El receipt oficial pertenece a otro model_id (${row.status}).` : `El receipt oficial está en ${row.status}.` };
   const closed = cycle ? Date.parse(cycle.closes_at) < Date.now() : false;
   return closed
     ? { label: "Official submission", state: "fail", detail: "El ciclo cerró sin receipt oficial." }

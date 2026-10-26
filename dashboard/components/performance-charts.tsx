@@ -46,7 +46,7 @@ export function PerformanceCharts({ history, stations, horizons }: { history: Pe
             </defs>
             <Grid />
             <XAxis dataKey="cycle_label" tick={tick} tickLine={false} axisLine={false} minTickGap={16} />
-            <YAxis domain={[70, 100]} tick={tick} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
+            <YAxis domain={[0, 100]} tick={tick} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
             <ReferenceLine y={85} stroke="rgba(255,255,255,0.22)" strokeDasharray="4 4" />
             <ChartTooltip suffix="%" />
             <Area type="monotone" dataKey="accuracy" name="Accuracy del ciclo" stroke="#41d19b" strokeWidth={2.5} fill="url(#accuracyFill)" activeDot={{ r: 5 }} />
@@ -55,6 +55,7 @@ export function PerformanceCharts({ history, stations, horizons }: { history: Pe
         </ResponsiveContainer>
       </ChartPanel>
 
+      {history.some((point) => point.resolved_targets !== null) ? (
       <ChartPanel
         title="Cobertura por ciclo"
         subtitle="Cuántos targets ya tienen observation real"
@@ -70,13 +71,14 @@ export function PerformanceCharts({ history, stations, horizons }: { history: Pe
             <Grid />
             <XAxis dataKey="cycle_label" tick={tick} tickLine={false} axisLine={false} minTickGap={16} />
             <YAxis yAxisId="left" tick={tick} tickLine={false} axisLine={false} />
-            <YAxis yAxisId="right" orientation="right" domain={[70, 100]} tick={tick} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
+            <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={tick} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
             <ChartTooltip />
             <Bar yAxisId="left" dataKey="resolved_targets" name="Targets resueltos" fill="#6aa8ff" radius={[4, 4, 0, 0]} />
             <Line yAxisId="right" type="monotone" dataKey="accuracy" name="Accuracy" stroke="#41d19b" strokeWidth={2.5} dot={{ r: 3 }} />
           </ComposedChart>
         </ResponsiveContainer>
       </ChartPanel>
+      ) : null}
 
       <ChartPanel
         title="Estaciones que más pesan"
@@ -207,8 +209,8 @@ function formatPct(value: number | null): string {
 }
 
 function cycleLabel(point: PerformancePoint, index: number): string {
-  if (!point.data_cutoff) return `c_${index + 1}`;
-  const date = new Date(point.data_cutoff);
+  if (!point.accepted_at) return `c_${index + 1}`;
+  const date = new Date(point.accepted_at);
   if (Number.isNaN(date.getTime())) return `c_${index + 1}`;
   return new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", hour: "2-digit" }).format(date);
 }

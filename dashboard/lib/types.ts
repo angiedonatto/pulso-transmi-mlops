@@ -9,6 +9,10 @@ export type AlertItem = {
   entity?: string | number | null;
 };
 
+export type SnapshotResult =
+  | { source: "supabase"; snapshot: MonitoringSnapshot }
+  | { source: "unavailable"; snapshot: null; reason: "not_configured" | "query_error" | "empty" | "invalid_snapshot"; message: string };
+
 export type MonitoringSnapshot = {
   generated_at: string;
   model_id: string | null;
