@@ -10,4 +10,9 @@ artifacts/
 data/
 *.egg-info/
 .env.local
+.venv-mlflow/
+.mlflow/
+mlruns/
+mlartifacts/
+mlflow.db*
 supabase/.temp/

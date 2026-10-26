@@ -272,6 +272,12 @@ La observabilidad de Candidate G se guarda aparte en `prediction_traces` y no
 cambia el payload oficial. La reconstruccion de feedback historico normaliza las
 observaciones production-shaped antes de generar muestras supervisadas.
 
+## Tracking histórico con MLflow
+
+Los reportes existentes pueden reconstruirse en MLflow sin reentrenar ni
+modificar producción: **16 experimentos y 108 runs históricos**. Consulta
+[la guía de instalación, evidencia y reproducibilidad](docs/mlflow-tracking.md).
+
 ## Desarrollo del SDK
 
 ```bash

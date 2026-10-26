@@ -1,0 +1,221 @@
+{
+  "mlflow_version": "3.5.1",
+  "source_checkout": "d56defbb62ebc717eb84ceb9b672953b0105fff5",
+  "first_import": {
+    "tracking_uri": "sqlite:////workspace/pulso-transmi-mlops/.mlflow/mlflow.db",
+    "created": 108,
+    "reused": 0,
+    "verified": 108,
+    "experiments": {
+      "Pulso / AB / temporal-walk-forward": 3,
+      "Pulso / C / walk-forward-selection": 6,
+      "Pulso / D1 / hard-holdout": 6,
+      "Pulso / D1 / walk-forward": 6,
+      "Pulso / K / retrospective-phase-oos_shock": 9,
+      "Pulso / K / retrospective-phase-phase1": 9,
+      "Pulso / K / retrospective-phase-phase2": 9,
+      "Pulso / K / retrospective-phase-phase3_shock": 9,
+      "Pulso / K / retrospective-phase-stable": 9,
+      "Pulso / K / retrospective-window-all_cycles": 9,
+      "Pulso / K / retrospective-window-last_24h": 9,
+      "Pulso / K / retrospective-window-last_7d": 9,
+      "Pulso / K / retrospective-window-normal_phases": 9,
+      "Pulso / L / retrospective-holdout-2026-09-21T04:00": 2,
+      "Pulso / L / retrospective-holdout-2026-09-21T05:00": 2,
+      "Pulso / L / retrospective-holdout-pooled": 2
+    }
+  },
+  "second_import": {
+    "tracking_uri": "sqlite:////workspace/pulso-transmi-mlops/.mlflow/mlflow.db",
+    "created": 0,
+    "reused": 108,
+    "verified": 108,
+    "experiments": {
+      "Pulso / AB / temporal-walk-forward": 3,
+      "Pulso / C / walk-forward-selection": 6,
+      "Pulso / D1 / hard-holdout": 6,
+      "Pulso / D1 / walk-forward": 6,
+      "Pulso / K / retrospective-phase-oos_shock": 9,
+      "Pulso / K / retrospective-phase-phase1": 9,
+      "Pulso / K / retrospective-phase-phase2": 9,
+      "Pulso / K / retrospective-phase-phase3_shock": 9,
+      "Pulso / K / retrospective-phase-stable": 9,
+      "Pulso / K / retrospective-window-all_cycles": 9,
+      "Pulso / K / retrospective-window-last_24h": 9,
+      "Pulso / K / retrospective-window-last_7d": 9,
+      "Pulso / K / retrospective-window-normal_phases": 9,
+      "Pulso / L / retrospective-holdout-2026-09-21T04:00": 2,
+      "Pulso / L / retrospective-holdout-2026-09-21T05:00": 2,
+      "Pulso / L / retrospective-holdout-pooled": 2
+    }
+  },
+  "http_api_after_server_restart": {
+    "experiments": 16,
+    "runs": 108,
+    "exact_metrics_and_parameters_verified": 108,
+    "health_status": 200
+  },
+  "tests": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "command": "python -m pytest -q tests/test_mlflow_history.py",
+    "duration_seconds": 27.09
+  },
+  "production_files_changed": false,
+  "experiment_metrics": {
+    "Pulso / L / retrospective-holdout-pooled": [
+      "mean_station_accuracy",
+      "observed_truth",
+      "target_count"
+    ],
+    "Pulso / L / retrospective-holdout-2026-09-21T05:00": [
+      "mean_station_accuracy",
+      "observed_truth",
+      "target_count"
+    ],
+    "Pulso / L / retrospective-holdout-2026-09-21T04:00": [
+      "mean_station_accuracy",
+      "observed_truth",
+      "target_count"
+    ],
+    "Pulso / K / retrospective-window-last_24h": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / K / retrospective-window-last_7d": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / K / retrospective-window-normal_phases": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / K / retrospective-window-all_cycles": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / K / retrospective-phase-oos_shock": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / K / retrospective-phase-phase3_shock": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / K / retrospective-phase-phase2": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / K / retrospective-phase-phase1": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / K / retrospective-phase-stable": [
+      "accuracy_at_20",
+      "cycles",
+      "global_wape",
+      "global_wape_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "relative_bias",
+      "rows",
+      "signed_bias"
+    ],
+    "Pulso / D1 / hard-holdout": [
+      "bias",
+      "delta_pp_vs_b",
+      "global_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "signed_relative_bias",
+      "stations_improve",
+      "stations_worsen",
+      "wape"
+    ],
+    "Pulso / D1 / walk-forward": [
+      "bias",
+      "delta_pp_vs_b",
+      "global_accuracy",
+      "mae",
+      "mean_station_accuracy",
+      "signed_relative_bias",
+      "stations_improve",
+      "stations_worsen",
+      "wape"
+    ],
+    "Pulso / C / walk-forward-selection": [
+      "mean_station_accuracy"
+    ],
+    "Pulso / AB / temporal-walk-forward": [
+      "mean_station_accuracy",
+      "mean_station_wape",
+      "train_seconds"
+    ]
+  },
+  "ui": {
+    "application": "MLflow 3.5.1",
+    "capture_tool": "Playwright 1.56.0 with system Chromium; genuine screenshots, no image composition",
+    "captures": {
+      "evidence/mlflow-catalog.png": "f17e11d8e239b5b459fe5c0076ac1b7e020fbaca49d6daf3803a3bd36d9187f5",
+      "evidence/mlflow-experiments.png": "000af06a9d29119684e6582daf20e101f66f12ee74dd07787949a64dfc38b22b",
+      "evidence/mlflow-parameters.png": "722c64d0acaa7dddf39d3ff53de8e0ff75e9e8e62e1c33ec14a72cc7aa71688d"
+    }
+  }
+}
